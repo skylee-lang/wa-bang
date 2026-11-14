@@ -48,9 +48,10 @@ colors:{wabang:{50:'#F0F9FF',100:'#E0F2FE',200:'#BAE6FD',300:'#7DD3FC',400:'#38B
 /* ============ [사장님 설정 영역] 구글 시트 CSV 링크를 붙여넣으세요 ============ */
 const CONFIG = {
   CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvtWYASv36tk8-2ThheDiPSkCHeN_nc4FD99PDb5YFlMMKw_h9dGGMPadjPbUxKpu9zfuf8Tj3QJLY/pub?gid=2138382865&single=true&output=csv",              // 비워두면 샘플 매물 2개가 표시됩니다 (디자인 확인용)
-  PHONE: "",                // 예: "010-1234-5678" (비워두면 전화 버튼 숨김)
+  PHONE: "010-4445-6432",                // 예: "010-1234-5678" (비워두면 전화 버튼 숨김)
   ACTIVE_WORD: "진행중",    // 상태가 이 값이면 표시. '거래완료', '삭제' 등은 숨김
-  SHOW_BLANK_STATUS: true   // true: 상태가 비어 있어도 표시
+  SHOW_BLANK_STATUS: true,  // true: 상태가 비어 있어도 표시
+  SHOW_DONE: true           // true: 거래완료 매물을 회색으로 표시 / false: 완전히 숨김
 };
 /* ============================================================================ */
 </script>
@@ -62,7 +63,7 @@ const CONFIG = {
 
   <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-wabang-100 px-4 pt-3.5 pb-3" style="padding-top:max(.875rem,env(safe-area-inset-top))">
     <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center gap-2">
+      <a href="./" id="homeBtn" class="flex items-center gap-2" aria-label="와방 홈으로 (필터 초기화)">
         <div class="w-9 h-9 rounded-xl bg-wabang-600 flex items-center justify-center shadow-sm shadow-sky-200 shrink-0" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 3.2 2.8 11.1a1 1 0 0 0 .65 1.76H5V20a1 1 0 0 0 1 1h4.2v-5.6h3.6V21H18a1 1 0 0 0 1-1v-7.14h1.55a1 1 0 0 0 .65-1.76L12 3.2Z"/></svg>
         </div>
@@ -70,7 +71,7 @@ const CONFIG = {
           <h1 class="text-xl font-extrabold tracking-tight text-slate-900">와방</h1>
           <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-wabang-100 text-wabang-600 whitespace-nowrap">공인중개사 이하늘</span>
         </div>
-      </div>
+      </a>
       <div class="flex items-center gap-2">
         <span id="countBadge" class="text-xs font-bold text-wabang-600 bg-wabang-50 border border-wabang-200 px-2.5 py-1 rounded-full">매물 0건</span>
         <a id="callBtn" class="hidden p-1.5 rounded-full text-wabang-600 bg-wabang-50" aria-label="전화 문의"><i class="ph-fill ph-phone text-lg"></i></a>
@@ -209,26 +210,32 @@ function col(h,names){const hs=h.map(norm);for(const n of names){const i=hs.inde
 function driveThumb(u){u=u.trim();const m=u.match(/[?&]id=([\w-]+)/)||u.match(/\/d\/([\w-]+)/);return m?"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w1000":u}
 const TYPE_WORDS=["아파트","오피스텔","원룸","투룸","쓰리룸","상가"];
 
+const DBG={st:0,off:0,statuses:[],headers:""};
 function toItems(rows){
+  DBG.headers=rows[0].map(x=>x.trim()).join(" | ");
   const h=rows[0], ix={status:col(h,["상태"]),deal:col(h,["거래유형"]),type:col(h,["매물종류"]),area:col(h,["지역"]),
     dep:col(h,["보증금"]),rent:col(h,["월세"]),jeon:col(h,["전세금"]),sale:col(h,["매매가"]),fee:col(h,["관리비"]),
     exc:col(h,["전용면적","전용평수","전용"]),sup:col(h,["공급면적","공급평수","공급"]),floor:col(h,["층수","층"]),
     dir:col(h,["방향"]),pet:col(h,["반려동물","반려동물여부","펫"]),memo:col(h,["한줄특징","특징","메모"]),photo:col(h,["사진"])};
   const get=(r,i)=>i>=0?(r[i]||"").trim():"", out=[];
   for(const r of rows.slice(1)){
-    const st=get(r,ix.status);
-    if(!(st===CONFIG.ACTIVE_WORD||(CONFIG.SHOW_BLANK_STATUS&&st===""))) continue;
+    const st=get(r,ix.status), stKey=st.replace(/\s/g,"");
+    DBG.statuses.push(st||"(빈칸)");
+    const isDone=stKey.includes("완료");
+    const isActive=stKey===CONFIG.ACTIVE_WORD.replace(/\s/g,"")||(CONFIG.SHOW_BLANK_STATUS&&st==="");
+    if(!(isActive||(isDone&&CONFIG.SHOW_DONE))){DBG.st++;continue}
     const dep=num(get(r,ix.dep)),rent=num(get(r,ix.rent)),jeon=num(get(r,ix.jeon)),sale=num(get(r,ix.sale));
     let deals=DEAL_LIST.filter(d=>get(r,ix.deal).includes(d));
     if(!deals.length){if(rent||dep)deals.push("월세");if(jeon)deals.push("전세");if(sale)deals.push("매매")}
     const offers=deals.map(d=>RENT_DEALS.includes(d)?{deal:d,dep,rent}:{deal:d,dep:d==="전세"?jeon:sale,rent:0});
-    if(!offers.length) continue;
+    if(!offers.length){DBG.off++;continue}
     const tt=get(r,ix.type); let types=TYPE_WORDS.filter(w=>tt.includes(w)); if(!types.length&&tt)types=[tt];
     const pv=get(r,ix.pet), pet=["불가","협의","가능"].find(w=>pv.includes(w))||"";
-    out.push({types,type:types.join(", "),pet,area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
+    out.push({done:isDone,types,type:types.join(", "),pet,area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
       exc:get(r,ix.exc),sup:get(r,ix.sup),floor:get(r,ix.floor),dir:get(r,ix.dir),
       photos:get(r,ix.photo).split(",").map(x=>x.trim()).filter(Boolean).map(driveThumb)});
   }
+  out.sort((a,b)=>(a.done?1:0)-(b.done?1:0));   // 진행중 먼저, 거래완료는 아래로
   return out;
 }
 
@@ -274,14 +281,16 @@ function card(x,i){
       <button type="button" class="prev hidden sm:flex absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 items-center justify-center shadow-md z-10" aria-label="이전 사진"><i class="ph-bold ph-caret-left text-sm"></i></button>
       <button type="button" class="next hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 items-center justify-center shadow-md z-10" aria-label="다음 사진"><i class="ph-bold ph-caret-right text-sm"></i></button>`:""}</div>`;
   } else media=`<div class="w-full aspect-[4/3] cursor-pointer" data-open="${i}">${fallback(x.type)}</div>`;
-  return `<article class="bg-white rounded-3xl overflow-hidden border border-wabang-100 shadow-md shadow-sky-900/[0.04]" data-i="${i}" data-n="${n}">${media}
-    <div class="p-4">
-      <div class="flex items-center gap-1.5 flex-wrap mb-2">${dealBadges(x)}
+  const d=!!x.done;
+  if(d)media=`<div class="relative"><div class="grayscale opacity-60">${media}</div><div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20"><span class="px-5 py-2 rounded-2xl bg-slate-800/85 text-white text-lg font-extrabold tracking-wide">거래완료</span></div></div>`;
+  return `<article class="${d?'bg-slate-50':'bg-white'} rounded-3xl overflow-hidden border border-wabang-100 shadow-md shadow-sky-900/[0.04]" data-i="${i}" data-n="${n}">${media}
+    <div class="p-4 ${d?'grayscale opacity-60':''}">
+      <div class="flex items-center gap-1.5 flex-wrap mb-2">${d?'<span class="px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-slate-700 text-white">거래완료</span>':''}${dealBadges(x)}
         ${x.types.map(t=>`<span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600">${esc(t)}</span>`).join("")}
         ${petBadge(x)}
         <span class="text-xs font-bold text-slate-600 ml-0.5">${esc(x.area)}</span></div>
       <div class="flex items-end justify-between gap-2 mb-2.5">
-        <div>${priceLines(x,"text-xl font-extrabold text-slate-900 tracking-tight leading-tight")}
+        <div>${priceLines(x,d?"text-xl font-extrabold text-slate-400 line-through tracking-tight leading-tight":"text-xl font-extrabold text-slate-900 tracking-tight leading-tight")}
           ${x.fee?`<div class="text-xs font-semibold text-wabang-600 mt-0.5">관리비 ${esc(feeText(x.fee))}</div>`:""}</div>
         <button type="button" data-open="${i}" class="shrink-0 flex items-center gap-1 px-3 py-2 rounded-2xl bg-wabang-50 hover:bg-wabang-100 border border-wabang-200 text-wabang-600 text-xs font-extrabold transition-colors"><i class="ph-bold ph-plus text-sm"></i> 상세정보</button>
       </div>
@@ -292,7 +301,7 @@ function card(x,i){
 function render(){
   shown=filtered();
   $("list").innerHTML=shown.map(card).join("");
-  $("countBadge").textContent=`매물 ${shown.length}건`;
+  {const act=shown.filter(x=>!x.done).length,dn=shown.length-act;$("countBadge").textContent=`매물 ${act}건`+(dn?` · 완료 ${dn}`:"")}
   $("empty").classList.toggle("hidden",!!shown.length);
   if(!shown.length){const none=!all.length;$("emptyTitle").textContent=none?"등록된 매물이 없습니다":"조건에 맞는 매물이 없습니다";
     $("emptyDesc").textContent=none?"잠시 후 다시 확인해 주세요.":"금액 범위나 선택하신 거래 유형을 조금 넓혀서 다시 검색해 보세요.";$("resetEmpty").classList.toggle("hidden",none)}
@@ -311,9 +320,11 @@ function bindCard(a){
 
 /* ---------- 상세 팝업 ---------- */
 function openModal(x){
-  $("mHead").innerHTML=dealBadges(x)+x.types.map(t=>`<span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">${esc(t)}</span>`).join("")+`<span class="text-sm font-bold text-slate-800">${esc(x.area)}</span>`;
+  $("mHead").innerHTML=(x.done?'<span class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold bg-slate-700 text-white">거래완료</span>':"")+dealBadges(x)+x.types.map(t=>`<span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">${esc(t)}</span>`).join("")+`<span class="text-sm font-bold text-slate-800">${esc(x.area)}</span>`;
   $("mPrice").innerHTML=priceLines(x,"");
-  $("mPet").innerHTML=x.pet?petBadge(x,true):"";
+  $("mPrice").classList.toggle("text-slate-900",!x.done);$("mPrice").classList.toggle("text-slate-400",!!x.done);$("mPrice").classList.toggle("line-through",!!x.done);
+  $("mMedia").classList.toggle("grayscale",!!x.done);
+  $("mPet").innerHTML=(x.done?'<div class="px-3 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold mb-2">이미 거래가 완료된 매물입니다.</div>':"")+(x.pet?petBadge(x,true):"");
   $("mFee").textContent=x.fee?`관리비 ${feeText(x.fee)}`:"";
   $("mArea").style.whiteSpace="pre-line";$("mArea").textContent=areaText(x)||"-";
   $("mFloor").textContent=floorText(x.floor)||"-"; $("mDir").textContent=x.dir||"-";
@@ -387,11 +398,13 @@ function resetAll(){
   syncRent();drawTx();drawProp();drawPet();drawQuick();render();
 }
 ["resetTop","resetPanel","resetEmpty"].forEach(id=>$(id).onclick=resetAll);
+$("homeBtn").onclick=e=>{e.preventDefault();closeModal();resetAll();$("pricePanel").classList.add("hidden");$("chev").style.transform="";window.scrollTo({top:0,behavior:"smooth"})};
 
 /* ---------- 로딩 ---------- */
 const SAMPLE=[
  {types:["오피스텔","원룸"],type:"오피스텔, 원룸",area:"강남구 역삼동",fee:"8만 (인터넷 포함)",memo:"역삼역 도보 3분 신축 오피스텔. 풀옵션, 즉시 입주 가능.",offers:[{deal:"월세",dep:1000,rent:85},{deal:"전세",dep:20000,rent:0}],exc:"8.5",sup:"14",floor:"7/15층",dir:"남동향",pet:"가능",photos:[]},
- {types:["원룸"],type:"원룸",area:"서초구 서초동",fee:"포함",memo:"3개월 단기 가능, 가전 풀세팅.",offers:[{deal:"단기",dep:120,rent:120}],exc:"7",sup:"",floor:"3/5층",dir:"남향",pet:"불가",photos:[]}];
+ {types:["원룸"],type:"원룸",area:"서초구 서초동",fee:"포함",memo:"3개월 단기 가능, 가전 풀세팅.",offers:[{deal:"단기",dep:120,rent:120}],exc:"7",sup:"",floor:"3/5층",dir:"남향",pet:"불가",photos:[]},
+ {done:true,types:["아파트"],type:"아파트",area:"송파구 잠실동",fee:"15만",memo:"거래가 완료된 매물 예시입니다.",offers:[{deal:"매매",dep:150000,rent:0}],exc:"24",sup:"33",floor:"12/20층",dir:"남향",pet:"협의",photos:[]}];
 let rowCount=0;
 async function load(){
   if(CONFIG.PHONE){const t="tel:"+CONFIG.PHONE.replace(/[^0-9+]/g,"");$("callBtn").href=t;$("callBtn").classList.remove("hidden");$("mCall").href=t;$("mCall").classList.remove("hidden")}
@@ -404,10 +417,9 @@ async function load(){
     } else all=SAMPLE;
   }catch(e){all=[];$("loading").classList.add("hidden");render();$("emptyTitle").textContent="매물을 불러오지 못했어요";$("emptyDesc").textContent="잠시 후 새로고침해 주세요. (원인: "+(e&&e.message||e)+")";$("resetEmpty").classList.add("hidden");return}
   $("loading").classList.add("hidden");render();
-  if(!all.length&&rowCount>0)$("emptyDesc").textContent=`시트에서 ${rowCount}개 행을 읽었지만 표시 조건에 맞는 행이 없어요. 상태 열(진행중/빈칸)과 거래유형·금액 칸을 확인해 주세요.`;
+  if(!all.length&&rowCount>0)$("emptyDesc").textContent=`시트에서 ${rowCount}개 행을 읽었어요. 상태값 때문에 제외 ${DBG.st}개, 거래유형·금액이 없어 제외 ${DBG.off}개. (읽은 상태값: ${DBG.statuses.join(" / ")}) [읽은 열 이름: ${DBG.headers}]`;
 }
 load();
 </script>
 </body>
 </html>
-
