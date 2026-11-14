@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 검색 엔진 노출 차단 (링크 보유자 전용) -->
+<meta name="robots" content="noindex, nofollow">
+<title>와방 | 공인중개사 이하늘</title>
+<!-- 링크 미리보기(카톡/문자/SNS): og.jpg 를 index.html 과 같은 폴더에 두고,
+     아래 og:image 주소의 "여기에_내사이트주소" 를 실제 배포 주소(예: my-wabang.netlify.app)로 바꾸세요 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="와방">
+<meta property="og:title" content="와방 | 공인중개사 이하늘">
+<meta property="og:description" content="매매 · 전세 · 월세 매물을 사진으로 한눈에 확인하세요">
+<meta property="og:url" content="https://bu-room.github.io/wa-bang/">
+<meta property="og:image" content="https://bu-room.github.io/wa-bang/og.jpg">
+<meta property="og:image:secure_url" content="https://bu-room.github.io/wa-bang/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['Pretendard','-apple-system','BlinkMacSystemFont','system-ui','Roboto','sans-serif']},
+colors:{wabang:{50:'#F0F9FF',100:'#E0F2FE',200:'#BAE6FD',300:'#7DD3FC',400:'#38BDF8',500:'#0EA5E9',600:'#0284C7',dark:'#0F172A'}}}}}
+</script>
+<style>
+  .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+  .carousel-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+  .carousel-slide{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always}
+  @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal-animate{animation:slideUp .28s cubic-bezier(.16,1,.3,1) forwards}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  .carousel-slide{position:relative}
+  .carousel-track img,#mMedia img{-webkit-user-drag:none;user-drag:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .carousel-track,#mMedia{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  .carousel-slide::after{content:"";position:absolute;inset:0;z-index:2;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='170'%3E%3Cg transform='rotate(-24 130 85)' font-family='sans-serif' font-size='17' font-weight='700' text-anchor='middle'%3E%3Ctext x='131' y='86' fill='rgba(0,0,0,.22)'%3E%EC%99%80%EB%B0%A9 %C2%B7 %EA%B3%B5%EC%9D%B8%EC%A4%91%EA%B0%9C%EC%82%AC %EC%9D%B4%ED%95%98%EB%8A%98%3C/text%3E%3Ctext x='130' y='85' fill='rgba(255,255,255,.55)'%3E%EC%99%80%EB%B0%A9 %C2%B7 %EA%B3%B5%EC%9D%B8%EC%A4%91%EA%B0%9C%EC%82%AC %EC%9D%B4%ED%95%98%EB%8A%98%3C/text%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat}
+  @media print{body{display:none!important}}
+  button:focus-visible,input:focus-visible{outline:2px solid #0284C7;outline-offset:2px}
+</style>
+</head>
+<body class="bg-wabang-50 text-slate-800 antialiased selection:bg-wabang-200 selection:text-wabang-dark">
+<script>
+/* ============ [사장님 설정 영역] 구글 시트 CSV 링크를 붙여넣으세요 ============ */
+const CONFIG = {
+  CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSbMZKKPwauBMpxxaghe0X3MrBg8q7fNpbQjRf0Se4QoSHUVupQNAgVJBL_8LLceWI3MoXF_1ClhGtY/pub?gid=2111395519&single=true&output=csv",              // 비워두면 샘플 매물 2개가 표시됩니다 (디자인 확인용)
+  PHONE: "010-4445-6432",                // 예: "010-1234-5678" (비워두면 전화 버튼 숨김)
+  ACTIVE_WORD: "진행중",    // 상태가 이 값이면 표시. '거래완료', '삭제' 등은 숨김
+  SHOW_BLANK_STATUS: true   // true: 상태가 비어 있어도 표시
+};
+/* ============================================================================ */
+</script>
+
+<div class="max-w-md mx-auto min-h-screen bg-[#F5FAFF] shadow-xl shadow-sky-900/5 relative pb-20">
+
+  <!-- 상단 배너: banner.jpg 를 index.html 과 같은 폴더에 두세요 (없으면 자동으로 숨겨집니다) -->
+  <img src="banner.jpg" alt="와방 - 내가 찾는 집, 이제는 와방에서!" width="1000" height="563" fetchpriority="high" class="block w-full h-auto" onerror="this.remove()">
+
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-wabang-100 px-4 pt-3.5 pb-3" style="padding-top:max(.875rem,env(safe-area-inset-top))">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-wabang-600 flex items-center justify-center shadow-sm shadow-sky-200 shrink-0" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 3.2 2.8 11.1a1 1 0 0 0 .65 1.76H5V20a1 1 0 0 0 1 1h4.2v-5.6h3.6V21H18a1 1 0 0 0 1-1v-7.14h1.55a1 1 0 0 0 .65-1.76L12 3.2Z"/></svg>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <h1 class="text-xl font-extrabold tracking-tight text-slate-900">와방</h1>
+          <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-wabang-100 text-wabang-600 whitespace-nowrap">공인중개사 이하늘</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="countBadge" class="text-xs font-bold text-wabang-600 bg-wabang-50 border border-wabang-200 px-2.5 py-1 rounded-full">매물 0건</span>
+        <a id="callBtn" class="hidden p-1.5 rounded-full text-wabang-600 bg-wabang-50" aria-label="전화 문의"><i class="ph-fill ph-phone text-lg"></i></a>
+        <button id="resetTop" title="필터 초기화" aria-label="필터 초기화" class="p-1.5 rounded-full text-slate-400 hover:text-wabang-600 hover:bg-wabang-50"><i class="ph ph-arrows-clockwise text-lg"></i></button>
+      </div>
+    </div>
+    <div class="relative">
+      <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-wabang-500 text-lg"></i>
+      <input id="kw" type="text" placeholder="지역명, 역세권, 풀옵션, 주차 등 검색..." class="w-full pl-10 pr-9 py-2.5 bg-wabang-50/80 border border-wabang-200/80 rounded-2xl text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-wabang-400 focus:ring-2 focus:ring-wabang-100 transition-all">
+      <button id="kwClear" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-label="검색어 지우기"><i class="ph-fill ph-x-circle text-base"></i></button>
+    </div>
+  </header>
+
+  <section class="bg-white px-4 py-3.5 border-b border-wabang-100 space-y-3.5">
+    <div>
+      <span class="block text-xs font-bold text-slate-500 mb-1.5">거래 유형 <span class="text-[11px] font-normal text-wabang-600">(중복 선택 가능)</span></span>
+      <div id="txBox" class="flex flex-wrap gap-1.5"></div>
+    </div>
+    <div>
+      <span class="block text-xs font-bold text-slate-500 mb-1.5">매물 종류 <span class="text-[11px] font-normal text-wabang-600">(중복 선택 가능)</span></span>
+      <div id="propBox" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5"></div>
+    </div>
+    <button id="petToggle" type="button" aria-pressed="false" class="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs font-bold transition-all"></button>
+    <div class="pt-1">
+      <button id="priceToggle" type="button" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-wabang-50 border border-wabang-200/80 text-xs font-bold text-wabang-600 hover:bg-wabang-100/70 transition-all">
+        <span class="flex items-center gap-1.5"><i class="ph-fill ph-sliders-horizontal text-base"></i><span id="priceSummary">보증금 / 월세 금액 범위 설정</span></span>
+        <i id="chev" class="ph ph-caret-down text-sm transition-transform duration-200"></i>
+      </button>
+      <div id="pricePanel" class="hidden mt-2.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4">
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-bold text-slate-700">보증금 / 전세금 / 매매가 <span class="text-[11px] font-normal text-slate-500">(단위: 만원)</span></label>
+            <button type="button" data-clear="dep" class="text-[11px] text-slate-500 underline">지우기</button>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <input type="number" inputmode="numeric" id="depMin" placeholder="최소 (예: 100)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-wabang-400">
+            <span class="text-slate-400 font-bold">~</span>
+            <input type="number" inputmode="numeric" id="depMax" placeholder="최대 (예: 3000)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-wabang-400">
+          </div>
+          <div id="depQuick" class="flex flex-wrap gap-1"></div>
+        </div>
+        <hr class="border-slate-200/70">
+        <div id="rentBox">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-xs font-bold text-slate-700">월세 <span class="text-[11px] font-normal text-slate-500">(단위: 만원)</span></label>
+            <button type="button" data-clear="rent" class="text-[11px] text-slate-500 underline">지우기</button>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <input type="number" inputmode="numeric" id="rentMin" placeholder="최소 (예: 100)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-wabang-400">
+            <span class="text-slate-400 font-bold">~</span>
+            <input type="number" inputmode="numeric" id="rentMax" placeholder="최대 (예: 400)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-wabang-400">
+          </div>
+          <div id="rentQuick" class="flex flex-wrap gap-1"></div>
+        </div>
+        <div class="flex justify-end pt-1">
+          <button type="button" id="resetPanel" class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100"><i class="ph ph-arrow-counter-clockwise"></i> 전체 조건 초기화</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main id="list" class="px-4 py-4 space-y-5"></main>
+
+  <div id="loading" class="py-16 text-center space-y-3">
+    <div class="w-10 h-10 border-4 border-wabang-200 border-t-wabang-500 rounded-full animate-spin mx-auto"></div>
+    <p class="text-sm font-medium text-slate-500">와방 매물 리스트를 불러오는 중...</p>
+  </div>
+  <div id="empty" class="hidden px-6 py-20 text-center">
+    <div class="w-16 h-16 rounded-3xl bg-wabang-100 text-wabang-500 flex items-center justify-center mx-auto mb-4"><i class="ph ph-magnifying-glass text-3xl"></i></div>
+    <h3 id="emptyTitle" class="text-base font-bold text-slate-800 mb-1">조건에 맞는 매물이 없습니다</h3>
+    <p id="emptyDesc" class="text-xs text-slate-500 mb-5">금액 범위나 선택하신 거래 유형을 조금 넓혀서 다시 검색해 보세요.</p>
+    <button id="resetEmpty" class="px-5 py-2.5 rounded-2xl bg-wabang-600 text-white text-xs font-bold shadow-md shadow-sky-200 hover:bg-wabang-dark transition-all">모든 필터 초기화하기</button>
+  </div>
+  <footer class="text-center py-8 px-4 text-xs text-slate-500 border-t border-wabang-100/80 mt-6">
+    <p class="font-bold text-slate-600 mb-1">와방 · 공인중개사 이하늘</p>
+    <p>본 페이지는 안내 링크를 전달받으신 고객님 전용 매물 카탈로그입니다.</p>
+  </footer>
+</div>
+
+<!-- 상세 팝업 -->
+<div id="modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="매물 상세 정보">
+  <div class="absolute inset-0" id="mBack"></div>
+  <div class="modal-animate relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col z-10">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-white">
+      <div id="mHead" class="flex items-center gap-2 flex-wrap"></div>
+      <button id="mX" class="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200" aria-label="닫기"><i class="ph-bold ph-x text-base"></i></button>
+    </div>
+    <div class="overflow-y-auto flex-1">
+      <div id="mMedia" class="relative w-full aspect-[4/3] bg-wabang-50"></div>
+      <div class="p-5 space-y-5">
+        <div><div id="mPrice" class="text-2xl font-extrabold text-slate-900 tracking-tight leading-snug"></div><div id="mFee" class="text-xs font-semibold text-wabang-600 mt-1"></div></div>
+        <div id="mPet"></div>
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="p-3 rounded-2xl bg-wabang-50/80 border border-wabang-100 text-center"><div class="text-[11px] font-semibold text-slate-500 mb-1 flex items-center justify-center gap-1"><i class="ph-fill ph-ruler text-wabang-500"></i> 평수</div><div id="mArea" class="text-sm font-extrabold text-slate-800 leading-snug">-</div></div>
+          <div class="p-3 rounded-2xl bg-wabang-50/80 border border-wabang-100 text-center"><div class="text-[11px] font-semibold text-slate-500 mb-1 flex items-center justify-center gap-1"><i class="ph-fill ph-stairs text-wabang-500"></i> 층수</div><div id="mFloor" class="text-sm font-extrabold text-slate-800">-</div></div>
+          <div class="p-3 rounded-2xl bg-wabang-50/80 border border-wabang-100 text-center"><div class="text-[11px] font-semibold text-slate-500 mb-1 flex items-center justify-center gap-1"><i class="ph-fill ph-compass text-wabang-500"></i> 방향</div><div id="mDir" class="text-sm font-extrabold text-slate-800">-</div></div>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100"><h4 class="text-xs font-bold text-slate-500 mb-1.5">매물 특징 및 상세 안내</h4><p id="mMemo" class="text-sm text-slate-700 leading-relaxed whitespace-pre-line"></p></div>
+      </div>
+    </div>
+    <div class="p-4 border-t border-slate-100 bg-white flex gap-2">
+      <a id="mCall" class="hidden flex-1 text-center py-3 rounded-2xl bg-wabang-50 border border-wabang-200 text-wabang-600 text-sm font-bold">전화 문의</a>
+      <button id="mOk" class="flex-1 py-3 rounded-2xl bg-wabang-600 text-white text-sm font-bold shadow-md shadow-sky-200 hover:bg-wabang-dark transition-all">확인 완료</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+/* 사진 저장 방지: 우클릭 메뉴, 드래그 저장 차단 (사진 영역만) */
+const inPhoto=e=>e.target.closest&&e.target.closest(".carousel-track,#mMedia,[data-open]");
+document.addEventListener("contextmenu",e=>{if(inPhoto(e))e.preventDefault()});
+document.addEventListener("dragstart",e=>{if(inPhoto(e))e.preventDefault()});
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const n=parseInt(String(v??"").replace(/[^0-9]/g,""),10);return isNaN(n)?0:n};
+
+const DEAL_LIST=["월세","전세","매매","상가","단기"], RENT_DEALS=["월세","상가","단기"];
+const TYPES=["전체","아파트","오피스텔","원룸","투룸","쓰리룸"];
+const DEP_QUICK=[["~500만",null,500],["500~1000",500,1000],["1000~3000",1000,3000],["3000만~",3000,null]];
+const RENT_QUICK=[["~50만",null,50],["50~100만",50,100],["100~400만",100,400]];
+const QBTN="px-2 py-1 text-[11px] font-medium bg-white border border-slate-200 rounded-lg text-slate-600 hover:border-wabang-400 hover:text-wabang-600";
+
+let all=[], shown=[];
+const F={deals:new Set(),types:new Set(),kw:"",pet:false,depMin:null,depMax:null,rentMin:null,rentMax:null};
+
+/* ---------- CSV ---------- */
+function parseCSV(t){const rows=[];let row=[],cur="",q=false;t=t.replace(/^\uFEFF/,"");
+  for(let i=0;i<t.length;i++){const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
+    else if(c==='"')q=true;else if(c===','){row.push(cur);cur=""}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);cur="";rows.push(row);row=[]}else cur+=c}
+  if(cur!==""||row.length){row.push(cur);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()!==""))}
+const norm=h=>h.replace(/\([^)]*\)/g,"").replace(/（[^）]*）/g,"").replace(/\s/g,"");
+function col(h,names){const hs=h.map(norm);for(const n of names){const i=hs.indexOf(n);if(i>=0)return i}return -1}
+function driveThumb(u){u=u.trim();const m=u.match(/[?&]id=([\w-]+)/)||u.match(/\/d\/([\w-]+)/);return m?"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w1000":u}
+
+function toItems(rows){
+  const h=rows[0], ix={status:col(h,["상태"]),deal:col(h,["거래유형"]),type:col(h,["매물종류"]),area:col(h,["지역"]),
+    dep:col(h,["보증금"]),rent:col(h,["월세"]),jeon:col(h,["전세금"]),sale:col(h,["매매가"]),fee:col(h,["관리비"]),
+    exc:col(h,["전용면적","전용평수","전용"]),sup:col(h,["공급면적","공급평수","공급"]),floor:col(h,["층수","층"]),
+    dir:col(h,["방향"]),memo:col(h,["한줄특징","특징","메모"]),photo:col(h,["사진"]),pet:col(h,["반려동물","반려동물여부","펫"])};
+  const get=(r,i)=>i>=0?(r[i]||"").trim():"", out=[];
+  for(const r of rows.slice(1)){
+    const st=get(r,ix.status);
+    if(!(st===CONFIG.ACTIVE_WORD||(CONFIG.SHOW_BLANK_STATUS&&st===""))) continue;
+    const dep=num(get(r,ix.dep)),rent=num(get(r,ix.rent)),jeon=num(get(r,ix.jeon)),sale=num(get(r,ix.sale));
+    let deals=DEAL_LIST.filter(d=>get(r,ix.deal).includes(d));
+    if(!deals.length){if(rent||dep)deals.push("월세");if(jeon)deals.push("전세");if(sale)deals.push("매매")}
+    const offers=deals.map(d=>RENT_DEALS.includes(d)?{deal:d,dep,rent}:{deal:d,dep:d==="전세"?jeon:sale,rent:0});
+    if(!offers.length) continue;
+    const pv=get(r,ix.pet), pet=["불가","협의","가능"].find(w=>pv.includes(w))||"";
+    const tv=get(r,ix.type), types=TYPES.slice(1).filter(t=>tv.includes(t)); if(!types.length&&tv)types.push(tv);
+    out.push({pet,types,type:types.join(", "),area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
+      exc:get(r,ix.exc),sup:get(r,ix.sup),floor:get(r,ix.floor),dir:get(r,ix.dir),
+      photos:get(r,ix.photo).split(",").map(s=>s.trim()).filter(Boolean).map(driveThumb)});
+  }
+  return out;
+}
+
+/* ---------- 표기 ---------- */
+function won(n){if(n>=10000){const e=Math.floor(n/10000),r=n%10000;return e+"억"+(r?" "+r.toLocaleString():"")}return n.toLocaleString()}
+function priceText(o){if(RENT_DEALS.includes(o.deal))return `${o.deal} ${won(o.dep)} / ${o.rent.toLocaleString()}`;return o.dep?`${o.deal} ${won(o.dep)}`:`${o.deal} 가격 문의`}
+const feeText=f=>/^\d+$/.test(f)?f+"만":f;
+const pyung=v=>/평/.test(v)?v:v+"평";
+const areaText=x=>[x.exc&&`전용 ${pyung(x.exc)}`,x.sup&&`공급 ${pyung(x.sup)}`].filter(Boolean).join("\n");
+const floorText=f=>f&&(/층/.test(f)?f:f+"층");
+
+/* ---------- 필터 ---------- */
+const inRange=(v,a,b)=>(a==null||v>=a)&&(b==null||v<=b);
+const rentOn=()=>F.rentMin!=null||F.rentMax!=null;
+function offerOk(o){
+  if(F.deals.size&&!F.deals.has(o.deal))return false;
+  if(!inRange(o.dep,F.depMin,F.depMax))return false;
+  if(rentOn()&&!(RENT_DEALS.includes(o.deal)&&inRange(o.rent,F.rentMin,F.rentMax)))return false;
+  return true}
+function filtered(){const kw=F.kw.trim().toLowerCase();
+  return all.filter(x=>{
+    if(F.types.size&&!x.types.some(t=>F.types.has(t)))return false;
+    if(F.pet&&x.pet!=="가능")return false;
+    if(kw&&!(x.area+" "+x.memo+" "+x.type+" "+x.dir+" "+x.offers.map(o=>o.deal).join(" ")).toLowerCase().includes(kw))return false;
+    return x.offers.some(offerOk)})}
+
+/* ---------- 카드 ---------- */
+function fallback(type){return `<div class="w-full h-full bg-gradient-to-br from-wabang-50 via-wabang-100/70 to-sky-100 flex flex-col items-center justify-center p-6 text-center select-none"><div class="w-16 h-16 rounded-3xl bg-white shadow-sm shadow-sky-200/70 flex items-center justify-center text-wabang-500 mb-3"><i class="ph-duotone ph-buildings text-4xl"></i></div><span class="text-xs font-extrabold text-wabang-600 bg-white/80 px-3 py-1 rounded-full mb-1">와방 매물</span><p class="text-[11px] font-medium text-slate-500">${esc(type||"")} · 사진 준비중</p></div>`}
+window.FB=fallback;
+const PET_STYLE={"가능":"bg-emerald-100 text-emerald-800","협의":"bg-amber-100 text-amber-800","불가":"bg-slate-200 text-slate-700"};
+const petBadge=(x,big)=>x.pet?`<span class="${big?'px-3 py-1.5 text-sm':'px-2.5 py-0.5 text-[11px]'} rounded-lg font-extrabold ${PET_STYLE[x.pet]}">🐾 반려동물 ${x.pet}</span>`:"";
+const dealBadges=x=>x.offers.map(o=>`<span class="px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold bg-wabang-100 text-wabang-600">${esc(o.deal)}</span>`).join("");
+const priceLines=(x,cls)=>x.offers.map(o=>`<div class="${cls}">${esc(priceText(o))}</div>`).join("");
+
+function card(x,i){
+  const n=x.photos.length; let media;
+  if(n){
+    const slides=x.photos.map((p,k)=>`<div class="carousel-slide relative w-full aspect-[4/3] bg-wabang-50 overflow-hidden cursor-pointer" data-open="${i}"><img src="${esc(p)}" alt="${esc(x.area)} 매물 사진 ${k+1}" ${k?'loading="lazy"':''} referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.innerHTML=FB('${esc(x.type)}')" class="w-full h-full object-cover"></div>`).join("");
+    const multi=n>1;
+    media=`<div class="relative group"><div class="carousel-track no-scrollbar">${slides}</div>
+      ${multi?`<div class="pg absolute top-3 right-3 px-2.5 py-1 rounded-full bg-slate-900/60 text-white text-[11px] font-bold tracking-wider z-10 pointer-events-none">1/${n}</div>
+      <div class="dots absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 z-10 pointer-events-none">${x.photos.map((_,k)=>`<span class="h-1.5 rounded-full transition-all ${k?'w-1.5 bg-white/50':'w-3 bg-white'}"></span>`).join("")}</div>
+      <button type="button" class="prev hidden sm:flex absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 items-center justify-center shadow-md z-10" aria-label="이전 사진"><i class="ph-bold ph-caret-left text-sm"></i></button>
+      <button type="button" class="next hidden sm:flex absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-slate-800 items-center justify-center shadow-md z-10" aria-label="다음 사진"><i class="ph-bold ph-caret-right text-sm"></i></button>`:""}</div>`;
+  } else media=`<div class="w-full aspect-[4/3] cursor-pointer" data-open="${i}">${fallback(x.type)}</div>`;
+  return `<article class="bg-white rounded-3xl overflow-hidden border border-wabang-100 shadow-md shadow-sky-900/[0.04]" data-i="${i}" data-n="${n}">${media}
+    <div class="p-4">
+      <div class="flex items-center gap-1.5 flex-wrap mb-2">${dealBadges(x)}
+        ${x.types.map(t=>`<span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600">${esc(t)}</span>`).join("")}
+        ${petBadge(x)}
+        <span class="text-xs font-bold text-slate-600 ml-0.5">${esc(x.area)}</span></div>
+      <div class="flex items-end justify-between gap-2 mb-2.5">
+        <div>${priceLines(x,"text-xl font-extrabold text-slate-900 tracking-tight leading-tight")}
+          ${x.fee?`<div class="text-xs font-semibold text-wabang-600 mt-0.5">관리비 ${esc(feeText(x.fee))}</div>`:""}</div>
+        <button type="button" data-open="${i}" class="shrink-0 flex items-center gap-1 px-3 py-2 rounded-2xl bg-wabang-50 hover:bg-wabang-100 border border-wabang-200 text-wabang-600 text-xs font-extrabold transition-colors"><i class="ph-bold ph-plus text-sm"></i> 상세정보</button>
+      </div>
+      <p data-open="${i}" class="text-xs text-slate-500 line-clamp-2 leading-relaxed cursor-pointer">${esc(x.memo)||"평수·층수·방향은 상세정보 버튼을 눌러 확인하세요."}</p>
+    </div></article>`;
+}
+
+function render(){
+  shown=filtered();
+  $("list").innerHTML=shown.map(card).join("");
+  $("countBadge").textContent=`매물 ${shown.length}건`;
+  $("empty").classList.toggle("hidden",!!shown.length);
+  if(!shown.length){const none=!all.length;$("emptyTitle").textContent=none?"등록된 매물이 없습니다":"조건에 맞는 매물이 없습니다";
+    $("emptyDesc").textContent=none?"잠시 후 다시 확인해 주세요.":"금액 범위나 선택하신 거래 유형을 조금 넓혀서 다시 검색해 보세요.";$("resetEmpty").classList.toggle("hidden",none)}
+  document.querySelectorAll("#list article").forEach(bindCard);
+  summary();
+}
+function bindCard(a){
+  a.querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>openModal(shown[+el.dataset.open]));
+  const n=+a.dataset.n; if(n<2)return;
+  const t=a.querySelector(".carousel-track"),pg=a.querySelector(".pg"),ds=a.querySelectorAll(".dots span");
+  t.addEventListener("scroll",()=>{const i=Math.round(t.scrollLeft/t.clientWidth);pg.textContent=`${i+1}/${n}`;
+    ds.forEach((d,k)=>{d.className="h-1.5 rounded-full transition-all "+(k===i?"w-3 bg-white":"w-1.5 bg-white/50")})},{passive:true});
+  a.querySelector(".prev").onclick=e=>{e.stopPropagation();t.scrollBy({left:-t.clientWidth,behavior:"smooth"})};
+  a.querySelector(".next").onclick=e=>{e.stopPropagation();t.scrollBy({left:t.clientWidth,behavior:"smooth"})};
+}
+
+/* ---------- 상세 팝업 ---------- */
+function openModal(x){
+  $("mHead").innerHTML=dealBadges(x)+x.types.map(t=>`<span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600">${esc(t)}</span>`).join("")+`<span class="text-sm font-bold text-slate-800">${esc(x.area)}</span>`;
+  $("mPrice").innerHTML=priceLines(x,"");
+  $("mPet").innerHTML=x.pet?petBadge(x,true):"";
+  $("mFee").textContent=x.fee?`관리비 ${feeText(x.fee)}`:"";
+  $("mArea").style.whiteSpace="pre-line";$("mArea").textContent=areaText(x)||"-";
+  $("mFloor").textContent=floorText(x.floor)||"-"; $("mDir").textContent=x.dir||"-";
+  $("mMemo").textContent=x.memo||"등록된 상세 메모가 없습니다.";
+  const n=x.photos.length;
+  if(n){
+    const arrow=(cls,side,ic,label)=>`<button type="button" id="${cls}" class="absolute ${side} top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/85 hover:bg-white text-slate-800 flex items-center justify-center shadow-md z-10" aria-label="${label}"><i class="ph-bold ${ic} text-base"></i></button>`;
+    $("mMedia").innerHTML=`<div id="mTrack" class="carousel-track no-scrollbar w-full h-full">${x.photos.map((p,k)=>`<div class="carousel-slide w-full h-full bg-slate-900"><img src="${esc(p)}" alt="확대 사진 ${k+1}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.parentElement.innerHTML=FB('${esc(x.type)}')" class="w-full h-full object-cover"></div>`).join("")}</div>`
+      +(n>1?`<div id="mPg" class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 text-white text-xs font-bold z-10">1/${n}</div>
+        ${arrow("mPrev","left-2.5","ph-caret-left","이전 사진")}${arrow("mNext","right-2.5","ph-caret-right","다음 사진")}
+        <div id="mDots" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/30 z-10 pointer-events-none">${x.photos.map((_,k)=>`<span class="h-1.5 rounded-full transition-all ${k?'w-1.5 bg-white/50':'w-3 bg-white'}"></span>`).join("")}</div>`:"");
+    if(n>1){
+      const t=$("mTrack"), go=d=>t.scrollBy({left:d*t.clientWidth,behavior:"smooth"});
+      t.addEventListener("scroll",()=>{const i=Math.round(t.scrollLeft/t.clientWidth);
+        $("mPg").textContent=`${i+1}/${n}`;
+        $("mDots").querySelectorAll("span").forEach((d,k)=>{d.className="h-1.5 rounded-full transition-all "+(k===i?"w-3 bg-white":"w-1.5 bg-white/50")})},{passive:true});
+      $("mPrev").onclick=()=>go(-1); $("mNext").onclick=()=>go(1);
+    }
+  } else $("mMedia").innerHTML=fallback(x.type);
+
+  $("modal").classList.remove("hidden");document.body.style.overflow="hidden";$("mOk").focus();
+}
+function closeModal(){$("modal").classList.add("hidden");document.body.style.overflow=""}
+["mBack","mX","mOk"].forEach(id=>$(id).onclick=closeModal);
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape")closeModal();
+  if($("modal").classList.contains("hidden"))return;
+  if(e.key==="ArrowLeft"&&$("mPrev"))$("mPrev").click();
+  if(e.key==="ArrowRight"&&$("mNext"))$("mNext").click();
+});
+
+/* ---------- 필터 UI ---------- */
+function drawTx(){
+  $("txBox").innerHTML=DEAL_LIST.map(d=>{const on=F.deals.has(d);
+    return `<button type="button" data-tx="${d}" aria-pressed="${on}" class="px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${on?'bg-wabang-600 text-white border-wabang-600 shadow-sm shadow-sky-200':'bg-wabang-50 text-slate-600 border-wabang-200/70'}">${d}</button>`}).join("");
+  $("txBox").querySelectorAll("button").forEach(b=>b.onclick=()=>{const d=b.dataset.tx;F.deals.has(d)?F.deals.delete(d):F.deals.add(d);syncRent();drawTx();render()});
+}
+function drawPet(){
+  const b=$("petToggle");b.setAttribute("aria-pressed",F.pet);
+  b.className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl border text-xs font-bold transition-all "+(F.pet?"bg-emerald-700 text-white border-emerald-700 shadow-sm":"bg-white text-slate-600 border-slate-200 hover:bg-emerald-50");
+  b.textContent=F.pet?"🐾 반려동물 가능만 보는 중 (누르면 해제)":"🐾 반려동물 가능만 보기";
+}
+$("petToggle").onclick=()=>{F.pet=!F.pet;drawPet();render()};
+function drawProp(){
+  $("propBox").innerHTML=TYPES.map(t=>`<button type="button" data-p="${t}" class="shrink-0 px-3.5 py-1.5 rounded-full text-xs transition-all ${(t==="전체"?!F.types.size:F.types.has(t))?'bg-wabang-600 text-white font-bold shadow-sm shadow-sky-200':'bg-slate-100 text-slate-600 font-semibold hover:bg-wabang-50'}">${t}</button>`).join("");
+  $("propBox").querySelectorAll("button").forEach(b=>b.onclick=()=>{const t=b.dataset.p;if(t==="전체")F.types.clear();else F.types.has(t)?F.types.delete(t):F.types.add(t);drawProp();render()});
+}
+function drawQuick(){
+  const mk=(box,list,a,b)=>{$(box).innerHTML=list.map(([l,x,y],i)=>`<button type="button" data-i="${i}" class="${QBTN}${F[a]===x&&F[b]===y?' !border-wabang-500 !text-wabang-600':''}">${l}</button>`).join("");
+    $(box).querySelectorAll("button").forEach(btn=>btn.onclick=()=>{const[,x,y]=list[+btn.dataset.i];setRange(a,b,x,y)})};
+  mk("depQuick",DEP_QUICK,"depMin","depMax");mk("rentQuick",RENT_QUICK,"rentMin","rentMax");
+}
+function setRange(a,b,x,y){F[a]=x;F[b]=y;$(a).value=x??"";$(b).value=y??"";drawQuick();render()}
+function syncRent(){
+  const show=!F.deals.size||[...F.deals].some(d=>RENT_DEALS.includes(d));
+  $("rentBox").classList.toggle("hidden",!show);
+  if(!show)setRange("rentMin","rentMax",null,null);
+}
+function summary(){
+  const r=(a,b)=>a==null&&b==null?"":`${a??""}~${b??""}`, d=r(F.depMin,F.depMax), m=r(F.rentMin,F.rentMax);
+  $("priceSummary").textContent=(d||m)?[d&&`보증금 ${d}`,m&&`월세 ${m}`].filter(Boolean).join(" · ")+" (만원)":"보증금 / 월세 금액 범위 설정";
+}
+["depMin","depMax","rentMin","rentMax"].forEach(id=>$(id).addEventListener("input",e=>{F[id]=e.target.value===""?null:Number(e.target.value);drawQuick();render()}));
+document.querySelectorAll("[data-clear]").forEach(b=>b.onclick=()=>b.dataset.clear==="dep"?setRange("depMin","depMax",null,null):setRange("rentMin","rentMax",null,null));
+$("kw").addEventListener("input",e=>{F.kw=e.target.value;$("kwClear").classList.toggle("hidden",!e.target.value);render()});
+$("kwClear").onclick=()=>{$("kw").value="";F.kw="";$("kwClear").classList.add("hidden");render()};
+$("priceToggle").onclick=()=>{const hid=$("pricePanel").classList.toggle("hidden");$("chev").style.transform=hid?"":"rotate(180deg)"};
+function resetAll(){
+  F.deals.clear();F.types.clear();Object.assign(F,{pet:false,kw:"",depMin:null,depMax:null,rentMin:null,rentMax:null});
+  ["kw","depMin","depMax","rentMin","rentMax"].forEach(i=>$(i).value="");$("kwClear").classList.add("hidden");
+  syncRent();drawTx();drawProp();drawPet();drawQuick();render();
+}
+["resetTop","resetPanel","resetEmpty"].forEach(id=>$(id).onclick=resetAll);
+
+/* ---------- 로딩 ---------- */
+const SAMPLE=[
+ {types:["오피스텔","원룸"],type:"오피스텔, 원룸",area:"강남구 역삼동",fee:"8만 (인터넷 포함)",memo:"역삼역 도보 3분 신축 오피스텔. 풀옵션, 즉시 입주 가능.",offers:[{deal:"월세",dep:1000,rent:85},{deal:"전세",dep:20000,rent:0}],exc:"8.5",sup:"14",floor:"7/15층",dir:"남동향",pet:"가능",photos:[]},
+ {types:["원룸"],type:"원룸",area:"서초구 서초동",fee:"포함",memo:"3개월 단기 가능, 가전 풀세팅.",offers:[{deal:"단기",dep:120,rent:120}],exc:"7",sup:"",floor:"3/5층",dir:"남향",pet:"불가",photos:[]}];
+async function load(){
+  if(CONFIG.PHONE){const t="tel:"+CONFIG.PHONE.replace(/[^0-9+]/g,"");$("callBtn").href=t;$("callBtn").classList.remove("hidden");$("mCall").href=t;$("mCall").classList.remove("hidden")}
+  drawTx();drawProp();drawPet();drawQuick();syncRent();
+  try{
+    if(CONFIG.CSV_URL.startsWith("http")){
+      const res=await fetch(CONFIG.CSV_URL+(CONFIG.CSV_URL.includes("?")?"&":"?")+"t="+Date.now(),{cache:"no-store"}); // 캐시 우회
+      if(!res.ok)throw new Error(res.status);
+      const rows=parseCSV(await res.text()); all=rows.length>1?toItems(rows):[];
+    } else all=SAMPLE;
+  }catch(e){all=[];$("loading").classList.add("hidden");render();$("emptyTitle").textContent="매물을 불러오지 못했어요";$("emptyDesc").textContent="잠시 후 새로고침해 주세요.";$("resetEmpty").classList.add("hidden");return}
+  $("loading").classList.add("hidden");render();
+}
+load();
+</script>
+</body>
+</html>
