@@ -12,9 +12,9 @@
 <meta property="og:site_name" content="와방">
 <meta property="og:title" content="와방 | 공인중개사 이하늘">
 <meta property="og:description" content="매매 · 전세 · 월세 매물을 사진으로 한눈에 확인하세요">
-<meta property="og:url" content="https://bu-room.github.io/wa-bang/">
-<meta property="og:image" content="https://bu-room.github.io/wa-bang/og.jpg">
-<meta property="og:image:secure_url" content="https://bu-room.github.io/wa-bang/og.jpg">
+<meta property="og:url" content="https://skylee-lang.github.io/wa-bang/">
+<meta property="og:image" content="https://skylee-lang.github.io/wa-bang/og.jpg">
+<meta property="og:image:secure_url" content="https://skylee-lang.github.io/wa-bang/og.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -187,7 +187,7 @@ document.addEventListener("dragstart",e=>{if(inPhoto(e))e.preventDefault()});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>{const n=parseInt(String(v??"").replace(/[^0-9]/g,""),10);return isNaN(n)?0:n};
 
-const DEAL_LIST=["월세","전세","매매","단기"], RENT_DEALS=["월세","상가","단기"];
+const DEAL_LIST=["월세","전세","매매","단기"], RENT_DEALS=["월세","단기"];
 const TYPES=["전체","아파트","오피스텔","원룸","투룸","쓰리룸","상가"];
 const DEP_QUICK=[["~500만",null,500],["500~1000",500,1000],["1000~3000",1000,3000],["3000만~",3000,null]];
 const RENT_QUICK=[["~50만",null,50],["50~100만",50,100],["100~400만",100,400]];
@@ -407,3 +407,4 @@ load();
 </script>
 </body>
 </html>
+
