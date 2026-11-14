@@ -48,7 +48,7 @@ colors:{wabang:{50:'#F0F9FF',100:'#E0F2FE',200:'#BAE6FD',300:'#7DD3FC',400:'#38B
 /* ============ [사장님 설정 영역] 구글 시트 CSV 링크를 붙여넣으세요 ============ */
 const CONFIG = {
   CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvtWYASv36tk8-2ThheDiPSkCHeN_nc4FD99PDb5YFlMMKw_h9dGGMPadjPbUxKpu9zfuf8Tj3QJLY/pub?gid=2138382865&single=true&output=csv",              // 비워두면 샘플 매물 2개가 표시됩니다 (디자인 확인용)
-  PHONE: "010-4445-6432",                // 예: "010-1234-5678" (비워두면 전화 버튼 숨김)
+  PHONE: "",                // 예: "010-1234-5678" (비워두면 전화 버튼 숨김)
   ACTIVE_WORD: "진행중",    // 상태가 이 값이면 표시. '거래완료', '삭제' 등은 숨김
   SHOW_BLANK_STATUS: true   // true: 상태가 비어 있어도 표시
 };
@@ -392,17 +392,19 @@ function resetAll(){
 const SAMPLE=[
  {types:["오피스텔","원룸"],type:"오피스텔, 원룸",area:"강남구 역삼동",fee:"8만 (인터넷 포함)",memo:"역삼역 도보 3분 신축 오피스텔. 풀옵션, 즉시 입주 가능.",offers:[{deal:"월세",dep:1000,rent:85},{deal:"전세",dep:20000,rent:0}],exc:"8.5",sup:"14",floor:"7/15층",dir:"남동향",pet:"가능",photos:[]},
  {types:["원룸"],type:"원룸",area:"서초구 서초동",fee:"포함",memo:"3개월 단기 가능, 가전 풀세팅.",offers:[{deal:"단기",dep:120,rent:120}],exc:"7",sup:"",floor:"3/5층",dir:"남향",pet:"불가",photos:[]}];
+let rowCount=0;
 async function load(){
   if(CONFIG.PHONE){const t="tel:"+CONFIG.PHONE.replace(/[^0-9+]/g,"");$("callBtn").href=t;$("callBtn").classList.remove("hidden");$("mCall").href=t;$("mCall").classList.remove("hidden")}
   drawTx();drawProp();drawPet();drawQuick();syncRent();
   try{
     if(CONFIG.CSV_URL.startsWith("http")){
-      const res=await fetch(CONFIG.CSV_URL+(CONFIG.CSV_URL.includes("?")?"&":"?")+"t="+Date.now(),{cache:"no-store"}); // 캐시 우회
+      const res=await fetch(CONFIG.CSV_URL+(CONFIG.CSV_URL.includes("?")?"&":"?")+"t="+Date.now()); // t= 값으로 캐시 우회
       if(!res.ok)throw new Error(res.status);
-      const rows=parseCSV(await res.text()); all=rows.length>1?toItems(rows):[];
+      const rows=parseCSV(await res.text()); rowCount=Math.max(rows.length-1,0); all=rows.length>1?toItems(rows):[];
     } else all=SAMPLE;
-  }catch(e){all=[];$("loading").classList.add("hidden");render();$("emptyTitle").textContent="매물을 불러오지 못했어요";$("emptyDesc").textContent="잠시 후 새로고침해 주세요.";$("resetEmpty").classList.add("hidden");return}
+  }catch(e){all=[];$("loading").classList.add("hidden");render();$("emptyTitle").textContent="매물을 불러오지 못했어요";$("emptyDesc").textContent="잠시 후 새로고침해 주세요. (원인: "+(e&&e.message||e)+")";$("resetEmpty").classList.add("hidden");return}
   $("loading").classList.add("hidden");render();
+  if(!all.length&&rowCount>0)$("emptyDesc").textContent=`시트에서 ${rowCount}개 행을 읽었지만 표시 조건에 맞는 행이 없어요. 상태 열(진행중/빈칸)과 거래유형·금액 칸을 확인해 주세요.`;
 }
 load();
 </script>
