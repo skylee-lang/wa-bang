@@ -207,12 +207,13 @@ function parseCSV(t){const rows=[];let row=[],cur="",q=false;t=t.replace(/^\uFEF
 const norm=h=>h.replace(/\([^)]*\)/g,"").replace(/（[^）]*）/g,"").replace(/\s/g,"");
 function col(h,names){const hs=h.map(norm);for(const n of names){const i=hs.indexOf(n);if(i>=0)return i}return -1}
 function driveThumb(u){u=u.trim();const m=u.match(/[?&]id=([\w-]+)/)||u.match(/\/d\/([\w-]+)/);return m?"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w1000":u}
+const TYPE_WORDS=["아파트","오피스텔","원룸","투룸","쓰리룸","상가"];
 
 function toItems(rows){
   const h=rows[0], ix={status:col(h,["상태"]),deal:col(h,["거래유형"]),type:col(h,["매물종류"]),area:col(h,["지역"]),
     dep:col(h,["보증금"]),rent:col(h,["월세"]),jeon:col(h,["전세금"]),sale:col(h,["매매가"]),fee:col(h,["관리비"]),
     exc:col(h,["전용면적","전용평수","전용"]),sup:col(h,["공급면적","공급평수","공급"]),floor:col(h,["층수","층"]),
-    dir:col(h,["방향"]),memo:col(h,["한줄특징","특징","메모"]),photo:col(h,["사진"]),pet:col(h,["반려동물","반려동물여부","펫"])};
+    dir:col(h,["방향"]),pet:col(h,["반려동물","반려동물여부","펫"]),memo:col(h,["한줄특징","특징","메모"]),photo:col(h,["사진"])};
   const get=(r,i)=>i>=0?(r[i]||"").trim():"", out=[];
   for(const r of rows.slice(1)){
     const st=get(r,ix.status);
@@ -222,11 +223,11 @@ function toItems(rows){
     if(!deals.length){if(rent||dep)deals.push("월세");if(jeon)deals.push("전세");if(sale)deals.push("매매")}
     const offers=deals.map(d=>RENT_DEALS.includes(d)?{deal:d,dep,rent}:{deal:d,dep:d==="전세"?jeon:sale,rent:0});
     if(!offers.length) continue;
+    const tt=get(r,ix.type); let types=TYPE_WORDS.filter(w=>tt.includes(w)); if(!types.length&&tt)types=[tt];
     const pv=get(r,ix.pet), pet=["불가","협의","가능"].find(w=>pv.includes(w))||"";
-    const tv=get(r,ix.type), types=TYPES.slice(1).filter(t=>tv.includes(t)); if(!types.length&&tv)types.push(tv);
-    out.push({pet,types,type:types.join(", "),area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
+    out.push({types,type:types.join(", "),pet,area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
       exc:get(r,ix.exc),sup:get(r,ix.sup),floor:get(r,ix.floor),dir:get(r,ix.dir),
-      photos:get(r,ix.photo).split(",").map(s=>s.trim()).filter(Boolean).map(driveThumb)});
+      photos:get(r,ix.photo).split(",").map(x=>x.trim()).filter(Boolean).map(driveThumb)});
   }
   return out;
 }
