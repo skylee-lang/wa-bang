@@ -193,7 +193,7 @@ document.addEventListener("contextmenu",e=>{if(inPhoto(e))e.preventDefault()});
 document.addEventListener("dragstart",e=>{if(inPhoto(e))e.preventDefault()});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>{const n=parseInt(String(v??"").replace(/[^0-9]/g,""),10);return isNaN(n)?0:n};
-
+const money=v=>{const n=parseFloat(String(v??"").replace(/,/g,"").replace(/[^0-9.]/g,""));return isNaN(n)?0:n};
 const DEAL_LIST=["월세","전세","매매","단기"], RENT_DEALS=["월세","단기"];
 const TYPES=["전체","원룸","투룸","오피스텔","쓰리룸","아파트","상가"];
 const DEP_QUICK=[["~500만",null,500],["500~1000",500,1000],["1000~3000",1000,3000],["3000만~",3000,null]];
@@ -230,7 +230,7 @@ function toItems(rows){
     const isDone=stKey.includes("완료");
     const isActive=stKey===CONFIG.ACTIVE_WORD.replace(/\s/g,"")||(CONFIG.SHOW_BLANK_STATUS&&st==="");
     if(!(isActive||(isDone&&CONFIG.SHOW_DONE))){DBG.st++;continue}
-    const dep=num(get(r,ix.dep)),rent=num(get(r,ix.rent)),jeon=num(get(r,ix.jeon)),sale=num(get(r,ix.sale));
+    const dep=money(get(r,ix.dep)),rent=money(get(r,ix.rent)),jeon=money(get(r,ix.jeon)),sale=money(get(r,ix.sale));
     let deals=DEAL_LIST.filter(d=>get(r,ix.deal).includes(d));
     if(!deals.length){if(rent||dep)deals.push("월세");if(jeon)deals.push("전세");if(sale)deals.push("매매")}
     const offers=deals.map(d=>RENT_DEALS.includes(d)?{deal:d,dep,rent}:{deal:d,dep:d==="전세"?jeon:sale,rent:0});
@@ -246,8 +246,17 @@ function toItems(rows){
 }
 
 /* ---------- 표기 ---------- */
-function won(n){if(n>=10000){const e=Math.floor(n/10000),r=n%10000;return e+"억"+(r?" "+r.toLocaleString():"")}return n.toLocaleString()}
-function priceText(o){if(RENT_DEALS.includes(o.deal))return `${o.deal} ${won(o.dep)} / ${o.rent.toLocaleString()}`;return o.dep?`${o.deal} ${won(o.dep)}`:`${o.deal} 가격 문의`}
+function won(n){
+  const w=Math.round(n*10000); if(!w)return "0";
+  const eok=Math.floor(w/1e8), man=Math.floor((w%1e8)/1e4), rest=w%1e4;
+  const sub=rest?(rest%1000===0?(rest/1000)+"천원":rest.toLocaleString()+"원"):"";
+  const out=[];
+  if(eok)out.push(eok+"억");
+  if(man)out.push(man.toLocaleString()+(rest?"만":""));
+  if(sub)out.push(sub);
+  return out.join(" ");
+}
+function priceText(o){if(RENT_DEALS.includes(o.deal))return `${o.deal} ${won(o.dep)} / ${won(o.rent)}`;return o.dep?`${o.deal} ${won(o.dep)}`:`${o.deal} 가격 문의`}
 const feeText=f=>/^\d+$/.test(f)?f+"만":f;
 const pyung=v=>/평/.test(v)?v:v+"평";
 const areaText=x=>[x.exc&&`전용 ${pyung(x.exc)}`,x.sup&&`공급 ${pyung(x.sup)}`].filter(Boolean).join("\n");
