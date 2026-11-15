@@ -193,9 +193,11 @@ document.addEventListener("contextmenu",e=>{if(inPhoto(e))e.preventDefault()});
 document.addEventListener("dragstart",e=>{if(inPhoto(e))e.preventDefault()});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=v=>{const n=parseInt(String(v??"").replace(/[^0-9]/g,""),10);return isNaN(n)?0:n};
+/* 금액 칸: 만원 단위, 소수점 허용 (예: 45678.9 = 456,789,000원) */
 const money=v=>{const n=parseFloat(String(v??"").replace(/,/g,"").replace(/[^0-9.]/g,""));return isNaN(n)?0:n};
+
 const DEAL_LIST=["월세","전세","매매","단기"], RENT_DEALS=["월세","단기"];
-const TYPES=["전체","원룸","투룸","오피스텔","쓰리룸","아파트","상가"];
+const TYPES=["전체","아파트","오피스텔","원룸","투룸","쓰리룸","상가"];
 const DEP_QUICK=[["~500만",null,500],["500~1000",500,1000],["1000~3000",1000,3000],["3000만~",3000,null]];
 const RENT_QUICK=[["~50만",null,50],["50~100만",50,100],["100~400만",100,400]];
 const QBTN="px-2 py-1 text-[11px] font-medium bg-white border border-slate-200 rounded-lg text-slate-600 hover:border-wabang-400 hover:text-wabang-600";
@@ -438,3 +440,4 @@ load();
 </script>
 </body>
 </html>
+
