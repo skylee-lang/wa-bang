@@ -57,7 +57,7 @@ const CONFIG = {
   KAKAO_OPENCHAT_URL: "https://open.kakao.com/o/sPQtqVTi",    // 오픈카톡 ('중개사에게 보내기'의 큰 버튼)
   INSTAGRAM_DM_URL: "https://www.instagram.com/_u/bu_room/",  // 휴대폰: 인스타 앱 프로필
   INSTAGRAM_WEB_URL: "https://www.instagram.com/bu_room/",    // 컴퓨터: 일반 프로필
-  INQUIRY_URL: "https://script.google.com/macros/s/AKfycby-lThcqgEl1Ge4eDPhKhwEL5AMO_YjYrHujkMdNhAhq7yYZq2L9UW1iGR-52nN5DDgig/exec"   // 구글 Apps Script 웹앱 주소를 넣으면 '중개사에게 바로 보내기'(자동 전송)가 기본 버튼이 돼요 (비워두면 문자로 전송)
+  INQUIRY_URL: ""   // 구글 Apps Script 웹앱 주소. 넣으면 오픈카톡으로 보낼 때 문의번호가 붙고 시트·카톡 알림에 자동 접수돼요 (손님 전화번호는 받지 않음)
 };
 /* ============================================================================ */
 </script>
@@ -237,18 +237,12 @@ const CONFIG = {
         <div class="text-xs font-bold text-slate-500 mb-1.5">희망 조건</div>
         <div id="sChat"></div>
       </div>
-      <!-- 성함·연락처: 자동 전송(INQUIRY_URL)일 때만 필요. 오픈카톡·문자·인스타는 보낸 사람이 이미 보이니까 숨김 -->
-      <div id="sWho" class="hidden grid-cols-2 gap-2">
-        <input id="sName" type="text" placeholder="성함 (선택)" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:border-wabang-400">
-        <input id="sPhone" type="tel" inputmode="tel" placeholder="연락처" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm focus:outline-none focus:border-wabang-400">
-      </div>
       <details class="rounded-2xl bg-slate-50 border border-slate-100">
         <summary class="px-3.5 py-2.5 text-xs font-bold text-slate-500 cursor-pointer">보낼 내용 미리보기</summary>
         <pre id="sPreview" class="px-3.5 pb-3 text-[11px] text-slate-700 whitespace-pre-wrap break-words font-sans leading-relaxed select-all"></pre>
       </details>
     </div>
     <div class="p-4 border-t border-slate-100 bg-white space-y-2" style="padding-bottom:max(1rem,env(safe-area-inset-bottom))">
-      <button id="sDirect" type="button" class="hidden w-full py-3.5 rounded-2xl bg-wabang-600 hover:bg-wabang-dark text-white text-sm font-extrabold shadow-md shadow-sky-200 flex items-center justify-center gap-2"><i class="ph-fill ph-paper-plane-right text-lg"></i><span id="sDirectText">중개사에게 바로 보내기</span></button>
       <!-- 큰 버튼은 오픈카톡 하나: 인스타 보고 처음 온 손님은 공유 창에 오픈카톡방이 없어서, 방을 바로 여는 오픈카톡이 가장 확실함 -->
       <button type="button" id="sKakao" class="w-full py-3.5 rounded-2xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-yellow-200"><i class="ph-fill ph-chat-teardrop-text text-lg"></i>오픈카톡으로 보내기</button>
       <!-- 나머지 방법은 접어 둠 (버튼이 많으면 고르는 것부터 부담) -->
@@ -295,6 +289,10 @@ const inPhoto=e=>e.target.closest&&e.target.closest(".carousel-track,#mMedia,[da
 document.addEventListener("contextmenu",e=>{if(inPhoto(e))e.preventDefault()});
 document.addEventListener("dragstart",e=>{if(inPhoto(e))e.preventDefault()});
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* 자동 접수 설정 (아래 '자동 접수' 설명 참고) — 화면 그리기 전에 준비돼 있어야 해서 맨 위에 둠 */
+const AUTO=!!CONFIG.INQUIRY_URL;
+const CODE_CH="ACDEFHJKMNPRTUVWXY34679";   // 헷갈리는 글자(0·O, 1·I·L, 2·Z, 5·S, 8·B) 제외
+let INQ={sig:"",code:"",sent:false};
 const num=v=>{const n=parseInt(String(v??"").replace(/[^0-9]/g,""),10);return isNaN(n)?0:n};
 /* 금액 칸: 만원 단위, 소수점 허용 (예: 45678.9 = 456,789,000원) */
 const money=v=>{const n=parseFloat(String(v??"").replace(/,/g,"").replace(/[^0-9.]/g,""));return isNaN(n)?0:n};
@@ -739,9 +737,9 @@ const itemShort=x=>[`${dong(x.area)} ${x.types[0]||x.type}`.trim(),x.offers.map(
 const condShort=c=>[c.structure,c.deposit&&"보증금 "+c.deposit,c.monthlyRent&&(/전세|매매/.test(c.monthlyRent)?c.monthlyRent:"월세 "+c.monthlyRent),
   c.parking&&!/불필요/.test(c.parking)?("주차 "+c.parking.replace(/필요\s*/,"")).trim():"",c.pet&&!/없/.test(c.pet)?"🐾"+c.pet:"",c.location].filter(Boolean).join(" · ");
 function buildMsg(){
-  const auto=!!CONFIG.INQUIRY_URL, nm=auto?$("sName").value.trim():"", ph=auto?$("sPhone").value.trim():"";
+  const code=inqCode();
   const N="①②③④⑤⑥⑦⑧⑨⑩", items=pickedItems(), c=getChat();
-  const L=[`🏠 [와방 문의] ${isUrgent(c)?"🔥입주 급함 ":""}${[nm,ph].filter(Boolean).join(" ")}`.trim()];
+  const L=[`🏠 [와방 문의]${code?" 문의번호 "+code:""}${isUrgent(c)?" 🔥입주 급함":""}`];
   if(c.viewingDate)L.push(`📅 방 보기: ${c.viewingDate}`);
   if(c.moveInDate)L.push(`🚚 입주: ${c.moveInDate}`);
   if(items.length){L.push(`❤️ 고른 매물 ${items.length}개`);items.forEach((x,k)=>L.push(`${N[k]||k+1+"."} #${x.id} ${itemShort(x)}`))}
@@ -775,20 +773,43 @@ function updateSendLinks(){
   const msg=buildMsg();$("sPreview").textContent=msg;
   // 문자: 받는 번호와 내용이 자동으로 채워져서 아이폰·갤럭시 모두 복사 없이 전송
   $("sSms").href=`sms:${(CONFIG.PHONE||"").replace(/[^0-9+]/g,"")}${IS_IOS?"&":"?"}body=${encodeURIComponent(msg)}`;
-  const auto=!!CONFIG.INQUIRY_URL;
-  $("sDirect").classList.toggle("hidden",!auto);
-  $("sWho").classList.toggle("hidden",!auto);$("sWho").classList.toggle("grid",auto);
-  $("sHint").innerHTML=(auto?"'바로 보내기'는 연락처만 꼭 적어주세요.<br>":"")
-    +"누르면 내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요.";
+  $("sHint").innerHTML="누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요."
+    +(AUTO?"<br>전화번호는 받지 않아요. 답장은 오픈카톡으로 드려요.":"");
 }
 function openSend(){$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
 function closeSend(){hideCopy();$("sendModal").classList.add("hidden");if($("modal").classList.contains("hidden"))document.body.style.overflow=""}
 $("pickBtn").onclick=openSend;["sBack","sX"].forEach(id=>$(id).onclick=closeSend);
-["sName","sPhone"].forEach(id=>$(id).addEventListener("input",updateSendLinks));
-const savedWho=LS.get("wabang_who");if(savedWho){$("sName").value=savedWho.n||"";$("sPhone").value=savedWho.p||""}
-const saveWho=()=>LS.set("wabang_who",{n:$("sName").value.trim(),p:$("sPhone").value.trim()});
+LS.set("wabang_who",null);   // 예전에 저장된 이름·연락처가 있으면 지움 (이제 받지 않음)
 
-$("sSms").addEventListener("click",saveWho);
+/* 자동 접수 (INQUIRY_URL 이 있을 때만): 전화번호 없이 문의번호로 접수 → 손님은 같은 번호가 적힌 글을 오픈카톡에 붙여넣음
+   - 문의번호는 휴대폰에서 바로 만듦: 복사는 터치 직후 바로 해야 해서(아이폰) 서버 응답을 기다릴 수 없음
+   - 고른 매물·조건이 같으면 같은 번호를 다시 씀 → 여러 번 눌러도 접수는 한 번
+   - 실제 접수는 손님이 '오픈카톡 열기'(또는 인스타·문자·공유)를 누를 때 → 복사만 하고 나가면 접수 안 됨 */
+const inqSig=()=>JSON.stringify([pickedItems().map(x=>x.id),getChat()]);
+function inqCode(){
+  if(!AUTO)return "";
+  const sig=inqSig();
+  if(INQ.sig!==sig){
+    let c="";const r=new Uint8Array(5);
+    try{crypto.getRandomValues(r)}catch(e){for(let i=0;i<5;i++)r[i]=Math.random()*256}
+    r.forEach(b=>c+=CODE_CH[b%CODE_CH.length]);
+    INQ={sig,code:c,sent:false};
+  }
+  return INQ.code;
+}
+function submitInquiry(via){
+  if(!AUTO)return;
+  const code=inqCode();if(INQ.sent)return;INQ.sent=true;
+  const items=pickedItems(), sent=INQ;
+  const body=JSON.stringify({code,via,
+    items:items.map(x=>({id:x.id,type:x.type,area:x.area,short:itemShort(x),price:x.offers.map(priceText).join(" / "),link:itemLink(x)})),
+    chat:getChat(),message:buildMsg()});
+  // keepalive: 손님이 바로 카톡 앱으로 넘어가도 전송이 끊기지 않게
+  fetch(CONFIG.INQUIRY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body,keepalive:true})
+    .then(r=>r.json()).then(j=>{if(!j||j.ok===false)throw new Error(j&&j.error)})
+    .catch(()=>{sent.sent=false});   // 실패해도 손님이 보낸 오픈카톡 글에 내용이 다 있음 → 다음에 누르면 다시 시도
+}
+$("sSms").addEventListener("click",()=>submitInquiry("문자"));
 /* 복사 (아이폰·갤럭시·PC): 터치 직후 '동기적으로' 실행해야 함 (await 뒤에 하면 아이폰이 막음) */
 function copyNow(text){
   let ok=false;const ta=document.createElement("textarea");
@@ -813,20 +834,21 @@ $("sMore").addEventListener("click",()=>{
   $("sMoreIco").className="ph-bold "+(open?"ph-caret-up":"ph-caret-down");
 });
 $("sShare").addEventListener("click",()=>{
-  saveWho();const msg=buildMsg();
+  const msg=buildMsg();
   copyNow(msg); // 혹시 공유 앱이 글을 안 받아도 붙여넣기 할 수 있게 미리 복사
   navigator.share({title:"와방 문의",text:msg})
-    .then(()=>toast("보냈어요! 중개사가 확인하면 연락드려요 🙌"))
+    .then(()=>{submitInquiry("공유");toast("보냈어요! 중개사가 확인하면 연락드려요 🙌")})
     .catch(e=>{if(e&&e.name==="AbortError")return; // 손님이 공유 창을 닫음
       showCopy("kakao",false)});
 });
 
 /* 1단계: 누르는 순간 복사 → 2단계: 확인 화면에서 오픈카톡/인스타 열기 */
 const PC_PASTE=!IS_MOBILE;
+let COPY_WHERE="kakao";
 function showCopy(where,ok){
-  const kakao=where==="kakao", msg=buildMsg();
+  const kakao=where==="kakao", msg=buildMsg(), code=inqCode();COPY_WHERE=where;
   $("sCopyText").value=msg;
-  $("sCopyTitle").textContent=ok?"✅ 내용이 복사됐어요":"복사를 한 번만 도와주세요";
+  $("sCopyTitle").textContent=ok?(code?`✅ 문의번호 ${code} · 복사됐어요`:"✅ 내용이 복사됐어요"):"복사를 한 번만 도와주세요";
   const paste=PC_PASTE?"<b>Ctrl+V</b>(맥은 ⌘+V)":"입력창을 <b>길게 눌러 '붙여넣기'</b>";
   $("sCopyDesc").innerHTML=ok
     ?`아래 버튼으로 ${kakao?"오픈카톡 채팅방":"인스타 프로필 → '메시지'"}을 열고 ${paste} 한 뒤 전송해 주세요.`
@@ -839,50 +861,14 @@ function showCopy(where,ok){
   if(!ok){const t=$("sCopyText");setTimeout(()=>{try{t.focus();t.setSelectionRange(0,t.value.length)}catch(e){}},50)}
 }
 function hideCopy(){$("sCopy").classList.add("hidden");$("sCopy").classList.remove("flex")}
-function copyThen(where){saveWho();copyNow(buildMsg()).then(ok=>showCopy(where,ok))}
+function copyThen(where){copyNow(buildMsg()).then(ok=>showCopy(where,ok))}
 $("sKakao").addEventListener("click",()=>copyThen("kakao"));
 $("sInsta").addEventListener("click",()=>copyThen("insta"));
 $("sCopyX").addEventListener("click",hideCopy);
 $("sCopyAgain").addEventListener("click",()=>copyNow($("sCopyText").value).then(ok=>{
   if(ok)toast("다시 복사했어요!");else{const t=$("sCopyText");t.focus();t.setSelectionRange(0,t.value.length);toast("글을 길게 눌러 '복사'해 주세요.")}}));
-$("sCopyGo").addEventListener("click",()=>toast(PC_PASTE?"채팅창에서 Ctrl+V 하면 붙여넣어져요":"채팅창을 길게 눌러 '붙여넣기' 해주세요"));
+$("sCopyGo").addEventListener("click",()=>{submitInquiry(COPY_WHERE==="kakao"?"오픈카톡":"인스타 DM");toast(PC_PASTE?"채팅창에서 Ctrl+V 하면 붙여넣어져요":"채팅창을 길게 눌러 '붙여넣기' 해주세요")});
 
-/* 자동 전송 (구글 Apps Script 웹앱 → 문의 시트 기록 + 중개사 카톡 알림) */
-$("sDirect").onclick=async()=>{
-  const ph=$("sPhone").value.trim();
-  if(ph.replace(/[^0-9]/g,"").length<9){toast("연락받으실 번호를 입력해 주세요.");$("sPhone").focus();return}
-  saveWho();const btn=$("sDirect");btn.disabled=true;$("sDirectText").textContent="전송 중...";
-  const items=pickedItems();
-  const body=JSON.stringify({name:$("sName").value.trim(),phone:ph,
-    items:items.map(x=>({id:x.id,type:x.type,area:x.area,short:itemShort(x),price:x.offers.map(priceText).join(" / "),link:itemLink(x)})),
-    chat:getChat(),message:buildMsg()});
-  let no=null;
-  try{
-    const r=await fetch(CONFIG.INQUIRY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body});
-    let j=null;try{j=await r.json()}catch(e){}
-    if(j&&j.ok===false)throw new Error(j.error||"서버 오류");
-    no=j&&j.id;
-  }catch(e){btn.disabled=false;$("sDirectText").textContent="중개사에게 바로 전송";toast("전송이 안 됐어요. 아래 '문자로 보내기'를 눌러주세요.");return}
-  showDone(no,items);
-  picks.clear();savePicks();render();
-  btn.disabled=false;$("sDirectText").textContent="중개사에게 바로 전송";
-};
-/* 손님용 접수 확인 화면 */
-function showDone(no,items){
-  const box=$("sDone");
-  box.innerHTML=`<div class="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl"><i class="ph-fill ph-check-circle"></i></div>
-    <div class="text-center space-y-1"><div class="text-lg font-extrabold text-slate-900">문의가 접수됐어요!</div>
-      ${no?`<div class="text-sm font-bold text-wabang-600">접수번호 #${esc(no)}</div>`:""}</div>
-    <div class="rounded-2xl bg-slate-50 border border-slate-100 p-4 text-xs text-slate-600 leading-relaxed space-y-1.5 break-keep">
-      <p>📞 중개사가 확인하는 대로 <b>${esc($("sPhone").value.trim())}</b>(으)로 연락드려요.</p>
-      ${items.length?`<p>❤️ 고르신 매물 ${items.length}개(${items.map(x=>"#"+esc(x.id)).join(", ")})를 보실 수 있게 준비해 둘게요.</p>`:`<p>💬 보내주신 조건에 맞는 매물을 찾아서 연락드릴게요.</p>`}
-      <p>🏠 혹시 그사이 거래가 끝난 매물이 있으면 비슷한 매물로 추천해 드려요.</p>
-    </div>
-    <button type="button" id="sDoneMore" class="w-full py-3.5 rounded-2xl bg-wabang-600 text-white text-sm font-extrabold">매물 더 둘러보기</button>
-    <a href="tel:${esc((CONFIG.PHONE||"").replace(/[^0-9+]/g,""))}" class="block text-center text-xs font-bold text-slate-500 underline">급하시면 바로 전화하기</a>`;
-  box.classList.remove("hidden");box.classList.add("flex");
-  $("sDoneMore").onclick=()=>{box.classList.add("hidden");box.classList.remove("flex");closeSend()};
-}
 function toast(m){const t=$("toast");t.textContent=m;t.classList.remove("hidden");clearTimeout(window.__tt);window.__tt=setTimeout(()=>t.classList.add("hidden"),3200)}
 
 /* =====================================================================
