@@ -212,6 +212,17 @@ const CONFIG = {
   <div class="absolute inset-0" id="sBack"></div>
   <div class="modal-animate relative w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] flex flex-col z-10">
     <div id="sDone" class="hidden absolute inset-0 z-20 bg-white flex-col justify-center gap-4 p-6 overflow-y-auto"></div>
+    <!-- 복사 확인 → 그다음에 오픈카톡/인스타 열기 (복사와 앱 이동을 한 번에 하면 아이폰·PC에서 복사가 끊기는 경우가 있어 두 단계로 나눔) -->
+    <div id="sCopy" class="hidden absolute inset-0 z-30 bg-white flex-col gap-3 p-5 overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <h4 id="sCopyTitle" class="text-base font-extrabold text-slate-900"></h4>
+        <button type="button" id="sCopyX" class="p-1.5 rounded-full bg-slate-100 text-slate-500" aria-label="뒤로"><i class="ph-bold ph-x text-base"></i></button>
+      </div>
+      <p id="sCopyDesc" class="text-xs text-slate-600 leading-relaxed break-keep"></p>
+      <textarea id="sCopyText" readonly class="w-full flex-1 min-h-[160px] p-3 rounded-xl bg-slate-50 border border-slate-200 text-[13px] text-slate-700 leading-relaxed resize-none"></textarea>
+      <button type="button" id="sCopyAgain" class="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-copy"></i>다시 복사하기</button>
+      <a id="sCopyGo" target="_blank" rel="noopener noreferrer" class="w-full py-3.5 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-md"></a>
+    </div>
     <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
       <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-1.5"><i class="ph-fill ph-paper-plane-tilt text-wabang-600"></i> 중개사에게 보내기</h3>
       <button id="sX" class="p-1.5 rounded-full bg-slate-100 text-slate-500" aria-label="닫기"><i class="ph-bold ph-x text-base"></i></button>
@@ -238,10 +249,15 @@ const CONFIG = {
     </div>
     <div class="p-4 border-t border-slate-100 bg-white space-y-2" style="padding-bottom:max(1rem,env(safe-area-inset-bottom))">
       <button id="sDirect" type="button" class="hidden w-full py-3.5 rounded-2xl bg-wabang-600 hover:bg-wabang-dark text-white text-sm font-extrabold shadow-md shadow-sky-200 flex items-center justify-center gap-2"><i class="ph-fill ph-paper-plane-right text-lg"></i><span id="sDirectText">중개사에게 바로 보내기</span></button>
-      <a id="sKakao" class="w-full py-3.5 rounded-2xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-yellow-200"><i class="ph-fill ph-chat-teardrop-text text-lg"></i>오픈카톡으로 보내기</a>
-      <div class="grid grid-cols-2 gap-2">
+      <!-- 큰 버튼은 오픈카톡 하나: 인스타 보고 처음 온 손님은 공유 창에 오픈카톡방이 없어서, 방을 바로 여는 오픈카톡이 가장 확실함 -->
+      <button type="button" id="sKakao" class="w-full py-3.5 rounded-2xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-yellow-200"><i class="ph-fill ph-chat-teardrop-text text-lg"></i>오픈카톡으로 보내기</button>
+      <!-- 나머지 방법은 접어 둠 (버튼이 많으면 고르는 것부터 부담) -->
+      <button type="button" id="sMore" class="w-full py-1 text-[11px] font-bold text-slate-400 flex items-center justify-center gap-1">다른 방법으로 보내기 <i id="sMoreIco" class="ph-bold ph-caret-down"></i></button>
+      <div id="sRow" class="hidden grid-cols-2 gap-2">
+        <!-- 휴대폰: 공유하기 (이미 대화한 적 있는 채팅방·인스타 DM으로 보낼 때 편함) -->
+        <button type="button" id="sShare" class="hidden py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold items-center justify-center gap-1"><i class="ph-bold ph-share-network"></i>공유하기</button>
         <a id="sSms" class="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-chat-circle-dots"></i>문자로</a>
-        <a id="sInsta" class="py-2.5 rounded-xl bg-wabang-50 border border-wabang-200 text-wabang-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-instagram-logo"></i>인스타 DM으로</a>
+        <button type="button" id="sInsta" class="py-2.5 rounded-xl bg-wabang-50 border border-wabang-200 text-wabang-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-instagram-logo"></i>인스타 DM으로</button>
       </div>
       <p id="sHint" class="text-[11px] text-slate-400 text-center leading-snug break-keep"></p>
     </div>
@@ -306,13 +322,18 @@ function driveThumb(u){u=u.trim();const m=u.match(/[?&]id=([\w-]+)/)||u.match(/\
 const TYPE_WORDS=["아파트","오피스텔","원룸","투룸","쓰리룸","상가"];
 
 const DBG={st:0,off:0,statuses:[],headers:""};
+/* 구글폼 타임스탬프 → 숫자 (예: "2026. 11. 18 오후 10:38:12", "2026-11-18 22:38", "11/18/2026 22:38:12") */
+function regTime(v){const n=(v||"").match(/\d+/g);if(!n||n.length<3)return 0;
+  let y,mo,d;if(n[0].length===4)[y,mo,d]=[+n[0],+n[1],+n[2]];else if(n[2].length===4)[mo,d,y]=[+n[0],+n[1],+n[2]];else return 0;
+  let hh=+(n[3]||0);if(/오후|PM/i.test(v)&&hh<12)hh+=12;if(/오전|AM/i.test(v)&&hh===12)hh=0;
+  const t=new Date(y,mo-1,d,hh,+(n[4]||0),+(n[5]||0)).getTime();return isNaN(t)?0:t}
 function toItems(rows){
   DBG.headers=rows[0].map(x=>x.trim()).join(" | ");
   const h=rows[0], ix={status:col(h,["상태"]),deal:col(h,["거래유형"]),type:col(h,["매물종류"]),area:col(h,["지역"]),
     dep:col(h,["보증금"]),rent:col(h,["월세"]),jeon:col(h,["전세금"]),sale:col(h,["매매가"]),fee:col(h,["관리비"]),
     exc:col(h,["전용면적","전용평수","전용"]),sup:col(h,["공급면적","공급평수","공급"]),floor:col(h,["층수","층"]),
     dir:col(h,["방향"]),pet:col(h,["반려동물","반려동물여부","펫"]),memo:col(h,["한줄특징","특징","메모"]),photo:col(h,["사진"]),
-    id:col(h,["매물번호","번호","ID","id"])};
+    id:col(h,["매물번호","번호","ID","id"]),reg:col(h,["타임스탬프","Timestamp","등록일시","등록일","등록 날짜"])};
   const get=(r,i)=>i>=0?(r[i]||"").trim():"", out=[];
   for(let ri=1;ri<rows.length;ri++){const r=rows[ri];
     const st=get(r,ix.status), stKey=st.replace(/\s/g,"");
@@ -327,11 +348,12 @@ function toItems(rows){
     if(!offers.length){DBG.off++;continue}
     const tt=get(r,ix.type); let types=TYPE_WORDS.filter(w=>tt.includes(w)); if(!types.length&&tt)types=[tt];
     const pv=get(r,ix.pet), pet=["불가","협의","가능"].find(w=>pv.includes(w))||"";
-    out.push({id:get(r,ix.id)||String(ri+1),done:isDone,types,type:types.join(", "),pet,area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
+    out.push({id:get(r,ix.id)||String(ri+1),done:isDone,row:ri,reg:regTime(get(r,ix.reg)),types,type:types.join(", "),pet,area:get(r,ix.area),fee:get(r,ix.fee),memo:get(r,ix.memo),offers,
       exc:get(r,ix.exc),sup:get(r,ix.sup),floor:get(r,ix.floor),dir:get(r,ix.dir),
       photos:get(r,ix.photo).split(",").map(x=>x.trim()).filter(Boolean).map(driveThumb)});
   }
-  out.sort((a,b)=>(a.done?1:0)-(b.done?1:0));   // 진행중 먼저, 거래완료는 아래로
+  // 진행중 먼저(거래완료는 아래로) → 최근 등록한 매물이 맨 위 (등록 시간, 없으면 시트 아래쪽 줄이 최신)
+  out.sort((a,b)=>((a.done?1:0)-(b.done?1:0))||((b.reg||0)-(a.reg||0))||(b.row-a.row));
   return out;
 }
 
@@ -757,14 +779,10 @@ function updateSendLinks(){
   $("sDirect").classList.toggle("hidden",!auto);
   $("sWho").classList.toggle("hidden",!auto);$("sWho").classList.toggle("grid",auto);
   $("sHint").innerHTML=(auto?"'바로 보내기'는 연락처만 꼭 적어주세요.<br>":"")
-    +"오픈카톡·인스타는 내용이 <b>자동 복사</b>돼요. 채팅창에 <b>붙여넣기</b>만 해주세요.<br>문자는 내용이 자동으로 채워져요.";
-  // 복사 후 오픈카톡/인스타로 이동 (아이폰 포함)
-  const tgt=a=>{a.setAttribute("target","_blank");a.setAttribute("rel","noopener noreferrer")};
-  $("sKakao").href=CONFIG.KAKAO_OPENCHAT_URL;tgt($("sKakao"));
-  $("sInsta").href=IS_MOBILE?CONFIG.INSTAGRAM_DM_URL:CONFIG.INSTAGRAM_WEB_URL;tgt($("sInsta"));
+    +"누르면 내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요.";
 }
 function openSend(){$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
-function closeSend(){$("sendModal").classList.add("hidden");if($("modal").classList.contains("hidden"))document.body.style.overflow=""}
+function closeSend(){hideCopy();$("sendModal").classList.add("hidden");if($("modal").classList.contains("hidden"))document.body.style.overflow=""}
 $("pickBtn").onclick=openSend;["sBack","sX"].forEach(id=>$(id).onclick=closeSend);
 ["sName","sPhone"].forEach(id=>$(id).addEventListener("input",updateSendLinks));
 const savedWho=LS.get("wabang_who");if(savedWho){$("sName").value=savedWho.n||"";$("sPhone").value=savedWho.p||""}
@@ -783,13 +801,51 @@ function copyNow(text){
   if(ok)return Promise.resolve(true);
   try{if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(text).then(()=>true,()=>false)}catch(e){}
   return Promise.resolve(false)}
-/* 자동 복사가 끝내 안 되면: 미리보기를 펼치고 글을 선택해 둠 → 길게 눌러 '복사' */
-function copyFallback(){const d=$("sPreview").closest("details");if(d)d.open=true;
-  try{const r=document.createRange();r.selectNodeContents($("sPreview"));const s=window.getSelection();s.removeAllRanges();s.addRange(r)}catch(e){}
-  $("sPreview").scrollIntoView({block:"center"})}
-function copyAndToast(okMsg){saveWho();copyNow(buildMsg()).then(ok=>{if(ok)toast(okMsg);else{copyFallback();toast("자동 복사가 안 됐어요. 미리보기 글을 길게 눌러 '복사'해 주세요.")}})}
-$("sKakao").addEventListener("click",()=>copyAndToast("내용이 복사됐어요! 오픈카톡 채팅창에 붙여넣기 해주세요."));
-$("sInsta").addEventListener("click",()=>copyAndToast("복사됐어요! 프로필의 '메시지'를 눌러 붙여넣기 해주세요."));
+/* 공유하기 (휴대폰): 공유 창에서 카톡·인스타 등 채팅방을 고르면 글이 바로 들어감 */
+var CAN_SHARE=IS_MOBILE&&typeof navigator.share==="function";
+if(CAN_SHARE){
+  const sh=$("sShare");sh.classList.remove("hidden");sh.classList.add("flex");
+  $("sRow").classList.replace("grid-cols-2","grid-cols-3");
+}
+$("sMore").addEventListener("click",()=>{
+  const row=$("sRow"),open=row.classList.contains("hidden");
+  row.classList.toggle("hidden",!open);row.classList.toggle("grid",open);
+  $("sMoreIco").className="ph-bold "+(open?"ph-caret-up":"ph-caret-down");
+});
+$("sShare").addEventListener("click",()=>{
+  saveWho();const msg=buildMsg();
+  copyNow(msg); // 혹시 공유 앱이 글을 안 받아도 붙여넣기 할 수 있게 미리 복사
+  navigator.share({title:"와방 문의",text:msg})
+    .then(()=>toast("보냈어요! 중개사가 확인하면 연락드려요 🙌"))
+    .catch(e=>{if(e&&e.name==="AbortError")return; // 손님이 공유 창을 닫음
+      showCopy("kakao",false)});
+});
+
+/* 1단계: 누르는 순간 복사 → 2단계: 확인 화면에서 오픈카톡/인스타 열기 */
+const PC_PASTE=!IS_MOBILE;
+function showCopy(where,ok){
+  const kakao=where==="kakao", msg=buildMsg();
+  $("sCopyText").value=msg;
+  $("sCopyTitle").textContent=ok?"✅ 내용이 복사됐어요":"복사를 한 번만 도와주세요";
+  const paste=PC_PASTE?"<b>Ctrl+V</b>(맥은 ⌘+V)":"입력창을 <b>길게 눌러 '붙여넣기'</b>";
+  $("sCopyDesc").innerHTML=ok
+    ?`아래 버튼으로 ${kakao?"오픈카톡 채팅방":"인스타 프로필 → '메시지'"}을 열고 ${paste} 한 뒤 전송해 주세요.`
+    :`이 브라우저가 자동 복사를 막았어요. 아래 글을 ${PC_PASTE?"전체 선택(Ctrl+A) 후 <b>Ctrl+C</b>":"<b>길게 눌러 '전체 선택' → '복사'</b>"} 해 주세요. 그다음 아래 버튼을 눌러 붙여넣기 하면 돼요.`;
+  const go=$("sCopyGo");
+  go.href=kakao?CONFIG.KAKAO_OPENCHAT_URL:(IS_MOBILE?CONFIG.INSTAGRAM_DM_URL:CONFIG.INSTAGRAM_WEB_URL);
+  go.className="w-full py-3.5 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-md "+(kakao?"bg-[#FEE500] text-[#191919] shadow-yellow-200":"bg-wabang-600 text-white shadow-sky-200");
+  go.innerHTML=kakao?'<i class="ph-fill ph-chat-teardrop-text text-lg"></i>오픈카톡 열고 붙여넣기':'<i class="ph-bold ph-instagram-logo text-lg"></i>인스타 열고 붙여넣기';
+  $("sCopy").classList.remove("hidden");$("sCopy").classList.add("flex");
+  if(!ok){const t=$("sCopyText");setTimeout(()=>{try{t.focus();t.setSelectionRange(0,t.value.length)}catch(e){}},50)}
+}
+function hideCopy(){$("sCopy").classList.add("hidden");$("sCopy").classList.remove("flex")}
+function copyThen(where){saveWho();copyNow(buildMsg()).then(ok=>showCopy(where,ok))}
+$("sKakao").addEventListener("click",()=>copyThen("kakao"));
+$("sInsta").addEventListener("click",()=>copyThen("insta"));
+$("sCopyX").addEventListener("click",hideCopy);
+$("sCopyAgain").addEventListener("click",()=>copyNow($("sCopyText").value).then(ok=>{
+  if(ok)toast("다시 복사했어요!");else{const t=$("sCopyText");t.focus();t.setSelectionRange(0,t.value.length);toast("글을 길게 눌러 '복사'해 주세요.")}}));
+$("sCopyGo").addEventListener("click",()=>toast(PC_PASTE?"채팅창에서 Ctrl+V 하면 붙여넣어져요":"채팅창을 길게 눌러 '붙여넣기' 해주세요"));
 
 /* 자동 전송 (구글 Apps Script 웹앱 → 문의 시트 기록 + 중개사 카톡 알림) */
 $("sDirect").onclick=async()=>{

@@ -82,7 +82,7 @@
       PHONE: "010-4445-6432",                                   // 중개사 휴대폰 번호
       LISTING_SITE_URL: "https://skylee-lang.github.io/wa-bang/", // 와방 매물 보는 사이트 주소
       // 매물 시트 CSV (동네 버튼을 자동으로 만들 때 사용, 매물 사이트와 같은 주소)
-      KAKAO_OPENCHAT_URL: "https://open.kakao.com/o/sPQtqVTi",   // 오픈카톡 (갤럭시·PC에서만 버튼 표시)
+      KAKAO_OPENCHAT_URL: "https://open.kakao.com/o/sPQtqVTi",   // 오픈카톡 (요약 카드의 노란 버튼)
       CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQvtWYASv36tk8-2ThheDiPSkCHeN_nc4FD99PDb5YFlMMKw_h9dGGMPadjPbUxKpu9zfuf8Tj3QJLY/pub?gid=2138382865&single=true&output=csv"
     };
   </script>
@@ -697,10 +697,41 @@
       try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => false); } catch (e) {}
       return Promise.resolve(false);
     }
-    function copyForKakao() {
-      copyText(buildFormattedSummaryText()).then(ok => showToast(ok
-        ? "조건이 복사됐어요! 오픈카톡 채팅창에 붙여넣기 해주세요."
-        : "자동 복사가 안 됐어요. 위 조건 글을 길게 눌러 '복사'하거나 '조건만 문자로'를 눌러주세요."));
+    // 1단계: 누르면 복사 → 2단계: 복사 확인 후 '오픈카톡 열기' (한 번에 하면 앱 이동 때문에 복사가 끊기는 경우가 있음)
+    const PC_PASTE = !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    // 휴대폰 공유하기: 공유 창에서 카톡 채팅방을 고르면 글이 바로 들어감 (복사·붙여넣기 불필요)
+    const CAN_SHARE = !PC_PASTE && typeof navigator.share === "function";
+    function shareSummary(btn) {
+      const text = buildFormattedSummaryText();
+      copyText(text); // 공유 앱이 글을 안 받는 경우 대비
+      navigator.share({ title: "와방 조건", text })
+        .then(() => showToast("보냈어요! 중개사가 확인하면 연락드려요 🙌"))
+        .catch(e => { if (e && e.name === "AbortError") return; copyForKakao(btn); });
+    }
+    function copyForKakao(btn) {
+      const text = buildFormattedSummaryText();
+      copyText(text).then(ok => {
+        const card = btn && btn.closest("#summaryCard");
+        if (!card) return;
+        card.querySelector("#kakaoStep")?.remove();
+        const box = document.createElement("div");
+        box.id = "kakaoStep";
+        box.className = "rounded-2xl border border-yellow-300 bg-yellow-50 p-3 space-y-2";
+        const paste = PC_PASTE ? "<b>Ctrl+V</b>(맥은 ⌘+V)" : "입력창을 <b>길게 눌러 '붙여넣기'</b>";
+        box.innerHTML = (ok
+          ? `<div class="text-xs font-extrabold text-slate-900">✅ 조건이 복사됐어요</div>
+             <div class="text-[11px] text-slate-600 leading-relaxed">아래 버튼으로 오픈카톡을 열고 ${paste} 한 뒤 전송해 주세요.</div>`
+          : `<div class="text-xs font-extrabold text-slate-900">복사를 한 번만 도와주세요</div>
+             <div class="text-[11px] text-slate-600 leading-relaxed">이 브라우저가 자동 복사를 막았어요. 아래 글을 ${PC_PASTE ? "Ctrl+A → <b>Ctrl+C</b>" : "<b>길게 눌러 '전체 선택' → '복사'</b>"} 해 주세요.</div>
+             <textarea readonly class="w-full h-32 p-2 rounded-xl bg-white border border-slate-200 text-[12px] text-slate-700 resize-none">${escapeHtml(text)}</textarea>`)
+          + `<a href="${CONFIG.KAKAO_OPENCHAT_URL}" target="_blank" rel="noopener noreferrer"
+               class="w-full py-3 rounded-xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-1.5 shadow-sm">
+               <i class="ph-fill ph-chat-teardrop-text"></i>오픈카톡 열고 붙여넣기</a>`;
+        btn.closest(".grid").after(box);
+        const ta = box.querySelector("textarea");
+        if (ta) setTimeout(() => { try { ta.focus(); ta.setSelectionRange(0, ta.value.length); } catch (e) {} }, 50);
+        box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
     }
 
     // 매물 사이트 안(도우미)에서 끝났을 때: 요약 + '맞는 매물 보기' 버튼 → 시트 닫고 목록으로
@@ -770,14 +801,17 @@
           class="w-full py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[15px] flex items-center justify-center gap-2 shadow-md active:scale-[0.99] transition">
           <i class="ph-fill ph-house-line text-xl text-sky-300"></i>내 조건에 맞는 매물 보기 <i class="ph-bold ph-arrow-right"></i>
         </a>
-        <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="copyForKakao(this)"
+          class="w-full py-3 rounded-2xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-1.5 shadow-sm">
+          <i class="ph-fill ph-chat-teardrop-text text-lg"></i>조건만 오픈카톡으로 보내기</button>
+        <div class="grid ${CAN_SHARE ? "grid-cols-2" : "grid-cols-1"} gap-2">
+          ${CAN_SHARE ? `<button type="button" onclick="shareSummary(this)"
+            class="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 text-xs font-bold flex items-center justify-center gap-1.5">
+            <i class="ph-bold ph-share-network"></i>공유하기</button>` : ""}
           <a href="${smsHref}"
             class="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 text-xs font-bold flex items-center justify-center gap-1.5">
-            <i class="ph-bold ph-chat-circle-dots"></i>조건만 문자로
+            <i class="ph-bold ph-chat-circle-dots"></i>문자로
           </a>
-          <a href="${CONFIG.KAKAO_OPENCHAT_URL}" target="_blank" rel="noopener noreferrer" onclick="copyForKakao()"
-            class="py-2.5 rounded-xl bg-[#FEE500] text-[#191919] text-xs font-extrabold flex items-center justify-center gap-1.5">
-            <i class="ph-fill ph-chat-teardrop-text"></i>조건만 오픈카톡으로</a>
         </div>
         <button type="button" onclick="restartChat()" class="w-full text-[11px] text-slate-400 underline">처음부터 다시</button>`;
       container.appendChild(cardEl);
