@@ -7,8 +7,8 @@
 <meta name="referrer" content="no-referrer">
 <title>와방 · 문의 상세 (중개사용)</title>
 <link rel="icon" type="image/png" href="../Favicon.png">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.2"></script>
 <script>
 if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['-apple-system','BlinkMacSystemFont','Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR','Roboto','Helvetica Neue','Segoe UI','sans-serif']}}}}
 </script>
@@ -24,7 +24,7 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['-apple-sys
 <script>
 /* ============ 설정 ============ */
 const CONFIG = {
-  API_URL: "",                       // 비워두면 카톡/시트 링크에 들어있는 주소를 자동 사용
+  API_URL: "",                       // 비워두면 시트 '상세페이지' 링크에 들어있는 주소를 자동 사용
   AGENT_NAME: "와방 공인중개사 이하늘",  // 손님에게 보내는 오픈카톡 답장 문구에 들어갈 이름
   SITE_URL: "../"                    // 매물 사이트 (손님 화면)
 };
@@ -198,8 +198,8 @@ async function update(params,done){
 function fail(t,d){$("app").innerHTML=`<div class="py-16 text-center"><div class="text-4xl mb-3">🔒</div><div class="font-extrabold text-slate-800 mb-1">${esc(t)}</div><p class="text-xs text-slate-500 leading-relaxed">${esc(d)}</p></div>`}
 
 (async function(){
-  if(!ID||!KEY)return fail("문의 링크가 아니에요","카톡 알림의 [문의 전체 보기] 버튼이나 시트의 '상세페이지' 링크로 들어와 주세요.");
-  if(!API)return fail("서버 주소가 없어요","카톡 알림이나 시트의 '상세페이지' 링크로 다시 들어와 주세요.");
+  if(!ID||!KEY)return fail("문의 링크가 아니에요","시트의 '상세페이지' 링크로 들어와 주세요.");
+  if(!API)return fail("서버 주소가 없어요","시트의 '상세페이지' 링크로 다시 들어와 주세요.");
   try{
     const r=await fetch(API+"?"+new URLSearchParams({api:"inquiry",id:ID,k:KEY}));const j=await r.json();
     if(!j.ok)return fail("문의를 열 수 없어요",j.error||"");
