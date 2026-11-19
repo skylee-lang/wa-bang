@@ -1184,13 +1184,17 @@ function copyNow(text){
   return Promise.resolve(false)}
 /* 공유하기 (휴대폰): 공유 창에서 카톡·인스타 등 채팅방을 고르면 글이 바로 들어감 */
 var CAN_SHARE=IS_MOBILE&&typeof navigator.share==="function";
-if(CAN_SHARE){
+/* 휴대폰(카톡·인스타 앱 안 브라우저 포함)은 무조건 큰 버튼 = '공유하기', 작은 줄 첫 칸 = 오픈카톡.
+   공유 창이 없는 앱 안 브라우저는 누르면 복사 → 오픈카톡 열기로 이어짐. PC는 예전처럼 큰 버튼 = 오픈카톡 */
+if(IS_MOBILE){
   const show=id=>{const e=$(id);e.classList.remove("hidden");e.classList.add("flex")};
   show("sShare");show("sKakaoSm");
   $("sKakao").classList.remove("flex");$("sKakao").classList.add("hidden");
   $("sRow").classList.replace("grid-cols-2","grid-cols-3");
+  if(!CAN_SHARE){const sm=$("sShare").querySelector("small");if(sm)sm.textContent="복사해서 카톡·인스타 어디든 붙여넣기"}
 }
 $("sShare").addEventListener("click",()=>{
+  if(!CAN_SHARE)return copyThen("kakao");
   const msg=buildMsg();
   copyNow(msg); // 혹시 공유 앱이 글을 안 받아도 붙여넣기 할 수 있게 미리 복사
   navigator.share({title:"와방 문의",text:msg})
