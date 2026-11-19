@@ -24,7 +24,7 @@ if(window.tailwind)tailwind.config={theme:{extend:{fontFamily:{sans:['-apple-sys
 <script>
 /* ============ 설정 ============ */
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycby-lThcqgEl1Ge4eDPhKhwEL5AMO_YjYrHujkMdNhAhq7yYZq2L9UW1iGR-52nN5DDgig/exec",                       // 비워두면 시트 '상세페이지' 링크에 들어있는 주소를 자동 사용
+  API_URL: "",   // 비워두면 손님 사이트(index.html)의 INQUIRY_URL을 자동으로 씀 → 문의접수 Apps Script를 새로 배포해도 여기는 안 고쳐도 됨
   AGENT_NAME: "와방 공인중개사 이하늘",  // 손님에게 보내는 오픈카톡 답장 문구에 들어갈 이름
   SITE_URL: "../"                    // 매물 사이트 (손님 화면)
 };
@@ -55,8 +55,15 @@ const CONFIG = {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const Q=new URLSearchParams(location.search), ID=Q.get("id"), KEY=Q.get("k");
-let API=CONFIG.API_URL||Q.get("api")||"";
-try{if(API)localStorage.setItem("wabang_api",API);else API=localStorage.getItem("wabang_api")||""}catch(e){}
+let API="";
+/* 서버 주소 후보: 설정값 → 손님 사이트의 문의접수 주소 → 링크의 api= → 이 기기에 마지막으로 성공한 주소. 앞에서부터 되는 것을 씀 */
+async function apiCandidates(){
+  const list=[CONFIG.API_URL];
+  try{const h=await (await fetch("../index.html",{cache:"no-cache"})).text();const m=h.match(/INQUIRY_URL\s*:\s*"([^"]+)"/);if(m)list.push(m[1])}catch(e){}
+  list.push(Q.get("api"));
+  try{list.push(localStorage.getItem("wabang_api"))}catch(e){}
+  return [...new Set(list.filter(u=>u&&/^https:\/\/script\.google\.com\//.test(u)))];
+}
 const IS_IOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 function toast(m){const t=$("toast");t.textContent=m;t.classList.remove("hidden");clearTimeout(window.__t);window.__t=setTimeout(()=>t.classList.add("hidden"),2500)}
 
@@ -199,12 +206,19 @@ function fail(t,d){$("app").innerHTML=`<div class="py-16 text-center"><div class
 
 (async function(){
   if(!ID||!KEY)return fail("문의 링크가 아니에요","시트의 '상세페이지' 링크로 들어와 주세요.");
-  if(!API)return fail("서버 주소가 없어요","시트의 '상세페이지' 링크로 다시 들어와 주세요.");
-  try{
-    const r=await fetch(API+"?"+new URLSearchParams({api:"inquiry",id:ID,k:KEY}));const j=await r.json();
-    if(!j.ok)return fail("문의를 열 수 없어요",j.error||"");
-    DATA=j;document.title=`문의 ${j.inquiry.id} | 와방`;render();
-  }catch(e){fail("불러오지 못했어요","잠시 후 새로고침해 주세요. ("+(e.message||e)+")")}
+  const cands=await apiCandidates();
+  if(!cands.length)return fail("서버 주소가 없어요","시트의 '상세페이지' 링크로 다시 들어와 주세요.");
+  let err=null,notOk=null;
+  for(const u of cands){
+    try{
+      const r=await fetch(u+"?"+new URLSearchParams({api:"inquiry",id:ID,k:KEY}));const j=await r.json();
+      if(!j.ok){notOk=notOk||j.error||"";continue}   // 예전 배포가 다른 시트를 볼 수도 있어서 다음 주소도 시도
+      API=u;try{localStorage.setItem("wabang_api",u)}catch(e){}
+      DATA=j;document.title=`문의 ${j.inquiry.id} | 와방`;render();return;
+    }catch(e){err=err||e}
+  }
+  if(notOk!==null)return fail("문의를 열 수 없어요",notOk);
+  fail("불러오지 못했어요","잠시 후 새로고침해 주세요. ("+((err&&err.message)||err)+")")
 })();
 </script>
 </body>

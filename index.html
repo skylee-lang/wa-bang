@@ -68,6 +68,12 @@ colors:{wabang:{50:'#F0F9FF',100:'#E0F2FE',200:'#BAE6FD',300:'#7DD3FC',400:'#38B
     .wb-card{transition:box-shadow .2s,transform .2s}
     .wb-card:hover{box-shadow:0 12px 28px rgba(12,74,110,.10);transform:translateY(-2px)}
   }
+  /* 보내기: 공유하기는 크기로만 살짝 강조 (색은 차분하게), 작은 버튼 3개는 같은 모양으로 */
+  .wb-share{background:linear-gradient(180deg,#FFFFFF 0%,#F0F9FF 100%);border:1.5px solid #BAE6FD;color:#0369A1;box-shadow:0 2px 10px rgba(14,165,233,.10)}
+  .wb-share:active{background:#E0F2FE}
+  .wb-share small{display:block;font-size:11px;font-weight:600;color:#64748B;margin-top:1px}
+  .wb-mini{background:#fff;border:1px solid #E2E8F0;color:#475569}
+  .wb-mini:active{background:#F8FAFC}
 </style>
 <style id="icon-build">@font-face{font-family:"Phosphor";src:url(data:font/woff;base64,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) format("woff");font-weight:normal;font-style:normal;font-display:block}
 .ph {  font-family: "Phosphor" !important; speak: never; font-style: normal; font-weight: normal; font-variant: normal; text-transform: none; line-height: 1;  letter-spacing: 0; -webkit-font-feature-settings: "liga"; -moz-font-feature-settings: "liga=1"; -moz-font-feature-settings: "liga"; -ms-font-feature-settings: "liga" 1; font-feature-settings: "liga"; -webkit-font-variant-ligatures: discretionary-ligatures; font-variant-ligatures: discretionary-ligatures;  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -488,15 +494,14 @@ const CONFIG = {
       </details>
     </div>
     <div class="p-4 border-t border-slate-100 bg-white space-y-2" style="padding-bottom:max(1rem,env(safe-area-inset-bottom))">
-      <!-- 큰 버튼은 오픈카톡 하나: 인스타 보고 처음 온 손님은 공유 창에 오픈카톡방이 없어서, 방을 바로 여는 오픈카톡이 가장 확실함 -->
+      <!-- 큰 버튼: 휴대폰은 '공유하기'(공유 창에서 카톡·인스타·문자 중 골라 글이 바로 들어감) / PC는 공유 창이 없어서 '오픈카톡' -->
+      <button type="button" id="sShare" class="hidden wb-share w-full py-2.5 rounded-2xl items-center justify-center gap-2.5"><i class="ph-bold ph-share-network text-lg"></i><span class="text-left leading-tight"><span class="text-sm font-extrabold">공유하기로 보내기</span><small>카톡·인스타·문자 중 골라서 바로</small></span></button>
       <button type="button" id="sKakao" class="w-full py-3.5 rounded-2xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-yellow-200"><i class="ph-fill ph-chat-teardrop-text text-lg"></i>오픈카톡으로 보내기</button>
-      <!-- 나머지 방법은 접어 둠 (버튼이 많으면 고르는 것부터 부담) -->
-      <button type="button" id="sMore" class="w-full py-1 text-[11px] font-bold text-slate-400 flex items-center justify-center gap-1">다른 방법으로 보내기 <i id="sMoreIco" class="ph-bold ph-caret-down"></i></button>
-      <div id="sRow" class="hidden grid-cols-2 gap-2">
-        <!-- 휴대폰: 공유하기 (이미 대화한 적 있는 채팅방·인스타 DM으로 보낼 때 편함) -->
-        <button type="button" id="sShare" class="hidden py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold items-center justify-center gap-1"><i class="ph-bold ph-share-network"></i>공유하기</button>
-        <a id="sSms" class="py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-chat-circle-dots"></i>문자로</a>
-        <button type="button" id="sInsta" class="py-2.5 rounded-xl bg-wabang-50 border border-wabang-200 text-wabang-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-instagram-logo"></i>인스타 DM으로</button>
+      <!-- 작은 버튼은 접지 않고 바로 보이게 (더보기를 한 번 더 누르는 단계 없앰) -->
+      <div id="sRow" class="grid grid-cols-2 gap-2">
+        <button type="button" id="sKakaoSm" class="hidden wb-mini py-2.5 rounded-xl text-xs font-bold items-center justify-center gap-1"><i class="ph-fill ph-chat-teardrop-text" style="color:#F2C200"></i>오픈카톡</button>
+        <a id="sSms" class="wb-mini py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-chat-circle-dots"></i>문자</a>
+        <button type="button" id="sInsta" class="wb-mini py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-instagram-logo"></i>인스타 DM</button>
       </div>
       <p id="sHint" class="text-[11px] text-slate-400 text-center leading-snug break-keep"></p>
     </div>
@@ -1126,7 +1131,9 @@ function updateSendLinks(){
   const msg=buildMsg();$("sPreview").textContent=msg;
   // 문자: 받는 번호와 내용이 자동으로 채워져서 아이폰·갤럭시 모두 복사 없이 전송
   $("sSms").href=`sms:${(CONFIG.PHONE||"").replace(/[^0-9+]/g,"")}${IS_IOS?"&":"?"}body=${encodeURIComponent(msg)}`;
-  $("sHint").innerHTML="누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요."
+  $("sHint").innerHTML=(CAN_SHARE
+      ?"공유 창에서 <b>카카오톡 → 와방 오픈카톡방</b>을 고르면 글이 바로 들어가요. 방이 안 보이면 바로 아래 <b>오픈카톡</b>을 눌러주세요."
+      :"누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요.")
     +(AUTO?"<br>전화번호는 받지 않아요. 답장은 오픈카톡으로 드려요.":"");
 }
 function openSend(){$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
@@ -1178,20 +1185,17 @@ function copyNow(text){
 /* 공유하기 (휴대폰): 공유 창에서 카톡·인스타 등 채팅방을 고르면 글이 바로 들어감 */
 var CAN_SHARE=IS_MOBILE&&typeof navigator.share==="function";
 if(CAN_SHARE){
-  const sh=$("sShare");sh.classList.remove("hidden");sh.classList.add("flex");
+  const show=id=>{const e=$(id);e.classList.remove("hidden");e.classList.add("flex")};
+  show("sShare");show("sKakaoSm");
+  $("sKakao").classList.remove("flex");$("sKakao").classList.add("hidden");
   $("sRow").classList.replace("grid-cols-2","grid-cols-3");
 }
-$("sMore").addEventListener("click",()=>{
-  const row=$("sRow"),open=row.classList.contains("hidden");
-  row.classList.toggle("hidden",!open);row.classList.toggle("grid",open);
-  $("sMoreIco").className="ph-bold "+(open?"ph-caret-up":"ph-caret-down");
-});
 $("sShare").addEventListener("click",()=>{
   const msg=buildMsg();
   copyNow(msg); // 혹시 공유 앱이 글을 안 받아도 붙여넣기 할 수 있게 미리 복사
   navigator.share({title:"와방 문의",text:msg})
     .then(()=>{submitInquiry("공유");toast("보냈어요! 중개사가 확인하면 연락드려요 🙌")})
-    .catch(e=>{if(e&&e.name==="AbortError")return; // 손님이 공유 창을 닫음
+    .catch(e=>{if(e&&e.name==="AbortError"){toast("공유 창에 와방 오픈카톡방이 없으면 바로 아래 '오픈카톡'을 눌러주세요");return} // 손님이 공유 창을 닫음
       showCopy("kakao",false)});
 });
 
@@ -1216,6 +1220,7 @@ function showCopy(where,ok){
 function hideCopy(){$("sCopy").classList.add("hidden");$("sCopy").classList.remove("flex")}
 function copyThen(where){copyNow(buildMsg()).then(ok=>showCopy(where,ok))}
 $("sKakao").addEventListener("click",()=>copyThen("kakao"));
+$("sKakaoSm").addEventListener("click",()=>copyThen("kakao"));
 $("sInsta").addEventListener("click",()=>copyThen("insta"));
 $("sCopyX").addEventListener("click",hideCopy);
 $("sCopyAgain").addEventListener("click",()=>copyNow($("sCopyText").value).then(ok=>{
