@@ -1,44 +1,37 @@
 /**
  * 와방 · 손님 문의 자동 접수 서버 (구글 Apps Script)
  *
- * 손님이 매물 사이트에서 '중개사에게 바로 전송'을 누르면
- *   1) 문의번호(#1, #2 …)를 자동으로 붙여 시트 '문의접수' 탭에 기록
- *   2) 중개사 카카오톡 '나와의 채팅'으로 한눈에 보이는 요약 메시지 발송 (카카오 연결 시)
- *   3) 메시지의 [문의 전체 보기] 버튼 → 중개사 전용 문의 상세 페이지
- *      (매물 사진·조건 비교·비공개 정보·전화/문자 답장·처리상태 변경·메모)
+ * 손님이 매물 사이트에서 '오픈카톡으로 보내기'를 누르면 (손님 전화번호는 받지 않음)
+ *   1) 손님 화면이 만든 문의번호(예: K7M3A)로 시트 '문의접수' 탭에 기록
+ *      → 손님이 오픈카톡에 붙여넣는 글 첫 줄에도 같은 번호가 있어서, 오픈카톡 대화와 시트·상세 페이지가 연결됨
+ *   2) 시트의 '상세페이지' 링크 → 중개사 전용 문의 상세 페이지
+ *      (매물 사진·조건 비교·비공개 정보·오픈카톡 답장 문구·처리상태 변경·메모)
  *
  * ───────── 설치 순서 ─────────
  * [1] 매물 구글 시트 → 확장 프로그램 → Apps Script → 이 코드 전체 붙여넣기 → 저장
+ *     (script.google.com 에서 따로 만든 프로젝트라면 아래 SHEET_ID 를 꼭 채우기)
  * [2] 위쪽 함수 선택 칸에서 '설치하기' → 실행 → 권한 허용
  *     (내 계정 선택 → 고급 → 안전하지 않음으로 이동 → 허용)
  * [3] 배포 → 새 배포 → 유형: 웹 앱 / 실행 사용자: 나 / 액세스 권한: 모든 사용자 → 배포
  * [4] '웹 앱 URL'(…/exec)을 매물 사이트 index.html 의 CONFIG.INQUIRY_URL 에 붙여넣기
  *     → 여기까지 하면 문의 접수 + 시트 기록 + 상세 페이지(시트의 '상세페이지' 링크)가 작동
  *
- * [5] (마지막) 카카오톡 알림 연결
- *   a. https://developers.kakao.com → 내 애플리케이션 → 애플리케이션 추가
- *   b. 앱 키의 'REST API 키' → 아래 KAKAO_REST_API_KEY 에 붙여넣기
- *   c. 카카오 로그인 활성화 ON / Redirect URI 에 웹 앱 URL 그대로 등록
- *   d. 동의항목 → '카카오톡 메시지 전송(talk_message)' 선택 동의
- *   e. 플랫폼(제품 링크 관리) → Web 사이트 도메인에 https://bu-room.github.io 등록
- *   f. (Client Secret '사용함'이면 코드 값을 KAKAO_CLIENT_SECRET 에)
- *   g. 코드 저장 → 배포 관리 → 수정(연필) → 버전: 새 버전 → 배포
- *   h. 브라우저에서  웹앱URL?setup=1  → 카카오톡 연결하기 → 테스트 메시지 오면 끝
- *
  * ※ 시트의 '관리용' 탭(직접 만드세요)에 [매물번호, 상세주소, 임대인 연락처, 비밀번호 …] 처럼 적어두면
  *   중개사 상세 페이지에만 표시됩니다. (손님에게 공개되는 매물 탭에는 절대 적지 마세요)
  * ※ 코드를 고친 뒤에는 '배포 관리 → 수정 → 새 버전 → 배포' 해야 반영됩니다. (주소 유지)
  */
 
-const KAKAO_REST_API_KEY  = "";            // 카카오 연결할 때 입력
-const KAKAO_CLIENT_SECRET = "";
-const SITE_URL            = "https://bu-room.github.io/siteandchat/";
+const SHEET_ID            = "";              // 매물 시트 주소의 /d/ 와 /edit 사이 값 (매물등록.gs 의 SHEET_ID 와 같은 값)
+const SITE_URL            = "https://skylee-lang.github.io/wa-bang/";
 const ADMIN_PAGE_URL      = SITE_URL + "admin/";
-const LISTING_SHEET_GID   = 2138382865;    // 손님에게 공개되는 매물 탭 (CSV 주소의 gid= 값)
+const LISTING_SHEET_GID   = 2138382865;    // 손님에게 공개되는 매물 탭 '설문지응답' (CSV 주소의 gid= 값)
 const PRIVATE_SHEET_NAME  = "관리용";      // 중개사만 보는 정보 탭
-const SHEET_NAME          = "문의접수";
+const INQUIRY_SHEET_GID   = 76524047;      // 문의가 기록되는 탭 '문의 응답' (주소의 gid= 값)
+const SHEET_NAME          = "문의접수";       // 위 탭을 못 찾을 때만 이 이름으로 새로 만듦
+const LIMIT_10MIN         = 30;            // 10분에 이보다 많이 들어오면 잠시 접수 중단 (장난·스팸 방지)
+const LIMIT_DAY           = 200;           // 하루 최대 접수 건수
 const STATUSES            = ["신규", "연락함", "투어예약", "계약", "보류", "종료"];
-const HEAD = ["문의번호", "접수시간", "성함", "연락처", "입주 시기", "매물번호", "고른 매물", "방 볼 수 있는 날", "희망 조건", "처리상태", "카톡알림", "상세페이지", "메모", "열쇠", "데이터"];
+const HEAD = ["문의번호", "접수시간", "접수경로", "오픈카톡 확인", "입주 시기", "매물번호", "고른 매물", "방 볼 수 있는 날", "희망 조건", "처리상태", "상세페이지", "메모", "열쇠", "데이터"];
 const C = Object.fromEntries(HEAD.map((h, i) => [h, i + 1]));   // 열 번호
 
 const PROPS = PropertiesService.getScriptProperties();
@@ -51,54 +44,62 @@ function doPost(e) {
     const d = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     const items = (d.items || []).slice(0, 10), c = d.chat || {};
     const clean = v => String(v == null ? "" : v).replace(/^[=+\-@]/, "'$&").slice(0, 2000);
-    const id = Number(PROPS.getProperty("LAST_ID") || 0) + 1;
-    PROPS.setProperty("LAST_ID", String(id));
-    const key = Utilities.getUuid().replace(/-/g, "").slice(0, 20);
-    const link = adminLink_(id, key);
+    const message = String(d.message || "").slice(0, 4000);
+    if (!items.length && !Object.keys(c).length) return json_({ ok: false, error: "빈 문의" });
+
+    // 문의번호: 손님 화면이 만든 5글자 (오픈카톡 글과 같은 번호). 형식이 이상하면 새로 만듦
+    let code = String(d.code || "").toUpperCase();
+    if (!/^[A-Z0-9]{4,8}$/.test(code)) code = newCode_();
 
     const sh = getSheet_();
+    // 같은 번호·같은 내용이 이미 있으면 (손님이 여러 번 누름) 다시 기록하지 않음
+    const last = sh.getLastRow(), from = Math.max(2, last - 299);
+    if (last >= 2) {
+      const rows = sh.getRange(from, 1, last - from + 1, HEAD.length).getValues();
+      const same = rows.filter(r => String(r[C["문의번호"] - 1]).replace(/-\d+$/, "") === code);
+      if (same.some(r => safeJson_(r[C["데이터"] - 1]).message === message)) return json_({ ok: true, id: code, duplicate: true });
+      if (same.length) code = code + "-" + (same.length + 1);   // 아주 드물게 번호가 겹치면 -2 붙임
+    }
+
+    // 장난·스팸 방지: 10분·하루 접수 상한
+    const cache = CacheService.getScriptCache();
+    const k10 = "n10_" + Math.floor(Date.now() / 600000), today = Utilities.formatDate(new Date(), "Asia/Seoul", "yyyyMMdd");
+    const dc = String(PROPS.getProperty("DAY_COUNT") || "").split(":");
+    const n10 = Number(cache.get(k10) || 0) + 1, nDay = (dc[0] === today ? Number(dc[1] || 0) : 0) + 1;
+    if (n10 > LIMIT_10MIN || nDay > LIMIT_DAY) return json_({ ok: false, error: "잠시 후 다시 시도해 주세요." });
+    cache.put(k10, String(n10), 700);
+    PROPS.setProperty("DAY_COUNT", today + ":" + nDay);
+
+    const key = Utilities.getUuid().replace(/-/g, "").slice(0, 20);
+    const link = adminLink_(code, key);
     sh.appendRow([
-      id, new Date(), clean(d.name), clean(d.phone),
+      code, new Date(), clean(d.via || "오픈카톡"), false,
       (isUrgent_(c) ? "🔥 " : "") + clean(c.moveInDate),
       items.map(x => x.id).join(", "),
       items.map(x => `#${x.id} ${x.short || x.area}`).join("\n"),
       clean(c.viewingDate), clean(condText_(c)),
-      "신규", "", link, "", key,
-      JSON.stringify({ name: d.name || "", phone: d.phone || "", items, chat: c, message: d.message || "" })
+      "신규", linkCell_(link), "", key,
+      JSON.stringify({ via: d.via || "", items, chat: c, message })
     ]);
     const row = sh.getLastRow();
+    sh.getRange(row, C["상세페이지"]).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);   // 옆 '메모' 칸을 가리지 않게
+    sh.getRange(row, C["오픈카톡 확인"]).insertCheckboxes();
+    PROPS.setProperty("LAST_ID", String(Number(PROPS.getProperty("LAST_ID") || 0) + 1));   // 누적 건수
 
-    let kakao = "미연결";
-    if (PROPS.getProperty("KAKAO_REFRESH")) {
-      try { sendKakaoLong_(agentMsg_(id, d), link); kakao = "발송"; }
-      catch (err) { kakao = "실패: " + String(err.message).slice(0, 200); }
-    }
-    sh.getRange(row, C["카톡알림"]).setValue(kakao);
-    return json_({ ok: true, id });
+    return json_({ ok: true, id: code });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
   } finally {
     lock.releaseLock();
   }
 }
-
-/* 중개사 카톡용 한눈에 보는 메시지 (200자 안쪽 목표) */
-function agentMsg_(id, d) {
-  const c = d.chat || {}, items = d.items || [], N = "①②③④⑤⑥⑦⑧⑨⑩";
-  const L = [`🏠 새 문의 #${id}${isUrgent_(c) ? " 🔥입주 급함" : ""} · ${d.name || "손님"} ${d.phone || ""}`.trim()];
-  const when = [c.moveInDate && (/입주/.test(c.moveInDate) ? c.moveInDate : "입주 " + c.moveInDate), c.viewingDate && "방 보기 " + c.viewingDate].filter(Boolean).join(" · ");
-  if (when) L.push("📅 " + when);
-  if (items.length) { L.push(`❤️ 고른 매물 ${items.length}개`); items.forEach((x, i) => L.push(`${N[i] || i + 1 + "."} #${x.id} ${x.short || x.area}`)); }
-  else L.push("❤️ 고른 매물 없음 (조건만 접수)");
-  // 짧은 조건: "투룸 · 1,000/50~80만 · 주차 · 🐾강아지 1마리"
-  const mr = String(c.monthlyRent || "");
-  const price = /전세|매매/.test(mr) ? mr : [c.deposit, mr].filter(Boolean).map(s => s.replace(/만원|이하|\s/g, "")).join("/") + (c.deposit || mr ? "만" : "");
-  const cond = [c.structure, price, c.parking && !/불필요/.test(c.parking) ? "주차" : "", c.pet && !/없/.test(c.pet) ? "🐾" + c.pet : ""].filter(Boolean).join(" · ");
-  if (cond) L.push("💬 " + cond);
-  if (c.location && L.join("\n").length + c.location.length < 185) L.push("📍 " + c.location);   // 자리 남으면 위치까지
-  return L.join("\n");
+function newCode_() {
+  const ch = "ACDEFHJKMNPRTUVWXY34679";
+  let c = ""; for (let i = 0; i < 5; i++) c += ch[Math.floor(Math.random() * ch.length)];
+  return c;
 }
-/* 입주가 한 달 안이면 '급함' → 카톡·시트·상세 페이지에 🔥 표시 (먼저 연락할 손님) */
+
+/* 입주가 한 달 안이면 '급함' → 시트·상세 페이지에 🔥 표시 (먼저 연락할 손님) */
 function isUrgent_(c) { return /즉시|1개월|이번\s*달|급/.test(String((c || {}).moveInDate || "")); }
 function condText_(c) {
   return [c.structure,
@@ -109,8 +110,28 @@ function condText_(c) {
     c.location
   ].filter(Boolean).join(" · ");
 }
+/* 시트에는 긴 주소 대신 '📄 상세 보기' 글자만 보이게 (눌러서 여는 건 그대로) */
+function linkCell_(url) {
+  return '=HYPERLINK("' + String(url).replace(/"/g, '""') + '","📄 상세 보기")';
+}
+/* 한 번만 실행: 이미 접수된 문의의 긴 주소도 '📄 상세 보기'로 바꾸고 칸 폭을 줄임 */
+function 상세링크_짧게() {
+  const sh = getSheet_(), last = sh.getLastRow(), col = C["상세페이지"];
+  if (last >= 2) {
+    const rng = sh.getRange(2, col, last - 1, 1);
+    const vals = rng.getValues(), forms = rng.getFormulas();
+    let n = 0;
+    vals.forEach((v, i) => {
+      const u = String(v[0] || "");
+      if (!forms[i][0] && /^https?:\/\//.test(u)) { sh.getRange(i + 2, col).setFormula(linkCell_(u)); n++; }
+    });
+    Logger.log("✅ 상세페이지 링크 " + n + "개를 '📄 상세 보기'로 바꿨어요");
+  }
+  sh.setColumnWidth(col, 110);
+  sh.getRange(1, col, sh.getMaxRows(), 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);   // 넘치는 글자가 '메모' 칸을 덮지 않게
+}
 function adminLink_(id, key) {
-  return ADMIN_PAGE_URL + "?id=" + id + "&k=" + key + "&api=" + encodeURIComponent(ScriptApp.getService().getUrl());
+  return ADMIN_PAGE_URL + "?id=" + id + "&k=" + key;   // 서버 주소는 admin/index.html 의 CONFIG.API_URL 에 들어 있어서 링크가 짧음
 }
 
 /* ===================== 웹 주소로 들어오는 요청 ===================== */
@@ -119,31 +140,8 @@ function doGet(e) {
   if (p.api === "inquiry") return json_(apiInquiry_(p));
   if (p.api === "update") return json_(apiUpdate_(p));
 
-  const self = ScriptApp.getService().getUrl();
-  if (p.code) {                                   // 카카오 로그인 후 돌아옴
-    try {
-      saveToken_(kakaoToken_({ grant_type: "authorization_code", redirect_uri: self, code: p.code }));
-      sendKakao_("✅ 와방 문의 알림이 연결됐어요!\n이제 새 문의가 오면 여기로 알려드려요.", SITE_URL);
-      return html_("✅ 연결 완료!", "카카오톡 '나와의 채팅'에 테스트 메시지가 왔는지 확인해 주세요.");
-    } catch (err) {
-      return html_("❌ 연결 실패", "원인: " + err.message + "<br><br>Redirect URI 에 아래 주소가 정확히 등록돼 있는지 확인해 주세요.<br><code>" + self + "</code>");
-    }
-  }
-  if (p.setup) {
-    if (!KAKAO_REST_API_KEY) return html_("REST API 키가 없어요", "코드 맨 위 KAKAO_REST_API_KEY 를 입력하고 새 버전으로 배포해 주세요.");
-    const url = "https://kauth.kakao.com/oauth/authorize?response_type=code&scope=talk_message&client_id=" +
-      encodeURIComponent(KAKAO_REST_API_KEY) + "&redirect_uri=" + encodeURIComponent(self);
-    return html_("카카오톡 알림 연결",
-      `<a href="${url}" target="_top" style="display:block;margin-top:16px;padding:16px;border-radius:14px;background:#FEE500;color:#191919;font-weight:800;text-decoration:none;text-align:center">카카오톡 연결하기</a>
-       <p style="margin-top:14px;color:#64748b;font-size:13px">문의를 받을 <b>중개사 본인 카카오 계정</b>으로 로그인해 주세요.</p>`);
-  }
-  if (p.test) {
-    try { sendKakao_("🔔 와방 테스트 알림입니다.", SITE_URL); return html_("테스트 발송 완료", "카톡을 확인해 주세요."); }
-    catch (err) { return html_("테스트 실패", err.message); }
-  }
   return html_("와방 문의 접수 서버 작동 중",
-    "카카오톡 연결: " + (PROPS.getProperty("KAKAO_REFRESH") ? "✅ 연결됨" : "❌ 미연결 (마지막 단계에서 주소 뒤에 ?setup=1)") +
-    "<br>접수된 문의: " + (PROPS.getProperty("LAST_ID") || 0) + "건");
+    "접수된 문의(누적): " + (PROPS.getProperty("LAST_ID") || 0) + "건");
 }
 
 /* 문의 상세 (중개사 페이지용) */
@@ -155,7 +153,7 @@ function apiInquiry_(p) {
   return {
     ok: true,
     inquiry: {
-      id: r[C["문의번호"] - 1], time: r[C["접수시간"] - 1], name: data.name, phone: data.phone,
+      id: r[C["문의번호"] - 1], time: r[C["접수시간"] - 1], via: r[C["접수경로"] - 1], message: data.message || "",
       status: r[C["처리상태"] - 1], memo: r[C["메모"] - 1], items: data.items || [], chat: data.chat || {}
     },
     listings: findListings_(ids),
@@ -182,7 +180,7 @@ function findInquiry_(id, key) {
 /* 매물번호로 공개 정보 + 관리용(비공개) 정보 찾기 */
 function findListings_(ids) {
   if (!ids.length) return [];
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = ss_();
   const norm = h => String(h).replace(/\([^)]*\)/g, "").replace(/\s/g, "");
   const idCol = h => h.map(norm).findIndex(x => ["매물번호", "번호", "ID", "id"].includes(x));
   const toObj = (h, r) => Object.fromEntries(h.map((k, i) => [String(k).trim(), r[i]]).filter(([k, val]) => k && String(val).trim() !== ""));
@@ -206,62 +204,41 @@ function findListings_(ids) {
 /* ===================== 처음 한 번 실행 ===================== */
 function 설치하기() {
   getSheet_();
-  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === "토큰갱신").forEach(t => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger("토큰갱신").timeBased().everyDays(1).atHour(4).create();
-  UrlFetchApp.getRequest("https://kauth.kakao.com");
-  const pub = SpreadsheetApp.getActiveSpreadsheet().getSheets().find(s => s.getSheetId() === LISTING_SHEET_GID);
+  Logger.log("시트 확인: " + ss_().getName() + " / 문의 탭: " + getSheet_().getName());
+  const pub = ss_().getSheets().find(s => s.getSheetId() === LISTING_SHEET_GID);
   Logger.log(pub ? "매물 탭 확인: " + pub.getName() : "⚠️ 매물 탭(gid " + LISTING_SHEET_GID + ")을 못 찾았어요. LISTING_SHEET_GID 를 확인하세요.");
+  상세링크_짧게();   // 이미 들어와 있는 긴 주소도 '📄 상세 보기'로
   Logger.log("설치 완료! 이제 웹 앱으로 배포하세요.");
-}
-function 토큰갱신() { if (PROPS.getProperty("KAKAO_REFRESH")) accessToken_(true); }
-
-/* ===================== 카카오 API ===================== */
-function kakaoToken_(params) {
-  const payload = Object.assign({ client_id: KAKAO_REST_API_KEY }, params);
-  if (KAKAO_CLIENT_SECRET) payload.client_secret = KAKAO_CLIENT_SECRET;
-  const res = UrlFetchApp.fetch("https://kauth.kakao.com/oauth/token", { method: "post", payload, muteHttpExceptions: true });
-  const t = JSON.parse(res.getContentText());
-  if (!t.access_token) throw new Error("토큰 발급 실패 " + res.getContentText());
-  return t;
-}
-function saveToken_(t) {
-  PROPS.setProperty("KAKAO_ACCESS", t.access_token);
-  PROPS.setProperty("KAKAO_EXPIRES", String(Date.now() + (t.expires_in - 300) * 1000));
-  if (t.refresh_token) PROPS.setProperty("KAKAO_REFRESH", t.refresh_token);
-}
-function accessToken_(force) {
-  const refresh = PROPS.getProperty("KAKAO_REFRESH");
-  if (!refresh) throw new Error("카카오톡 미연결");
-  if (!force && Date.now() < Number(PROPS.getProperty("KAKAO_EXPIRES") || 0)) return PROPS.getProperty("KAKAO_ACCESS");
-  saveToken_(kakaoToken_({ grant_type: "refresh_token", refresh_token: refresh }));
-  return PROPS.getProperty("KAKAO_ACCESS");
-}
-function sendKakao_(text, link) {
-  const tpl = { object_type: "text", text: text.slice(0, 200), link: { web_url: link, mobile_web_url: link }, button_title: "문의 전체 보기" };
-  const res = UrlFetchApp.fetch("https://kapi.kakao.com/v2/api/talk/memo/default/send", {
-    method: "post", headers: { Authorization: "Bearer " + accessToken_() },
-    payload: { template_object: JSON.stringify(tpl) }, muteHttpExceptions: true
-  });
-  if (res.getResponseCode() !== 200) throw new Error(res.getContentText());
-}
-/* 카톡 텍스트는 200자 제한 → 넘치면 줄 단위로 나눠 여러 개로 */
-function sendKakaoLong_(text, link) {
-  const parts = [];
-  let cur = "";
-  text.split("\n").forEach(l => {
-    while (l.length > 190) { if (cur) { parts.push(cur); cur = ""; } parts.push(l.slice(0, 190)); l = l.slice(190); }
-    const next = cur ? cur + "\n" + l : l;
-    if (next.length > 190) { parts.push(cur); cur = l; } else cur = next;
-  });
-  if (cur.trim()) parts.push(cur);
-  parts.forEach((p, i) => { sendKakao_((parts.length > 1 ? `(${i + 1}/${parts.length}) ` : "") + p, link); if (i < parts.length - 1) Utilities.sleep(300); });
 }
 
 /* ===================== 도우미 ===================== */
-function getSheet_() {
+function ss_() {
+  if (SHEET_ID) return SpreadsheetApp.openById(SHEET_ID);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) {
+  if (!ss) throw new Error("시트를 못 찾았어요. 코드 위쪽 SHEET_ID 에 매물 시트 주소의 /d/ 와 /edit 사이 값을 넣어 주세요.");
+  return ss;
+}
+function getSheet_() {
+  const ss = ss_();
+  let sh = ss.getSheets().find(s => s.getSheetId() === INQUIRY_SHEET_GID) || ss.getSheetByName(SHEET_NAME);
+  if (sh) {
+    const w = Math.max(sh.getLastColumn(), 1);
+    let h = sh.getRange(1, 1, 1, w).getValues()[0].map(String);
+    if (h.every(x => !x.trim())) {               // 빈 탭이면 제목 줄을 만들어 줌
+      sh.getRange(1, 1, 1, HEAD.length).setValues([HEAD]).setFontWeight("bold").setBackground("#E0F2FE");
+      sh.setFrozenRows(1);
+      sh.hideColumns(C["열쇠"], 2);
+      sh.getRange(2, C["처리상태"], 1000, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(STATUSES, true).build());
+      return sh;
+    }
+    // 예전 카카오 버전으로 만들어진 탭: '카톡알림' 열을 지워 열 위치를 맞춤
+    const kk = h.indexOf("카톡알림");
+    if (kk >= 0) { sh.deleteColumn(kk + 1); h = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String); }
+    // 예전 형식(성함·연락처 열)이면 열 이름만 새 이름으로 바꿈 (열 위치는 같음)
+    if (h[2] === "성함" || h[3] === "연락처") { sh.getRange(1, 3, 1, 2).setValues([[HEAD[2], HEAD[3]]]); h[2] = HEAD[2]; h[3] = HEAD[3]; }
+    if (h[0] !== HEAD[0] || h[C["상세페이지"] - 1] !== "상세페이지")
+      throw new Error("'" + sh.getName() + "' 탭의 제목 줄이 문의 형식과 달라요. 빈 탭으로 만들거나 INQUIRY_SHEET_GID 를 확인하세요.");
+  } else {
     sh = ss.insertSheet(SHEET_NAME);
     sh.appendRow(HEAD);
     sh.setFrozenRows(1);
@@ -277,5 +254,5 @@ function html_(title, body) {
   return HtmlService.createHtmlOutput(
     `<div style="font-family:-apple-system,sans-serif;max-width:420px;margin:40px auto;padding:0 20px">
      <h2 style="font-size:20px">${title}</h2><div style="font-size:15px;line-height:1.6;color:#334155">${body}</div></div>`
-  ).setTitle("와방 알림").addMetaTag("viewport", "width=device-width, initial-scale=1");
+  ).setTitle("와방 문의 접수").addMetaTag("viewport", "width=device-width, initial-scale=1");
 }
