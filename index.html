@@ -495,7 +495,7 @@ const CONFIG = {
     </div>
     <div class="p-4 border-t border-slate-100 bg-white space-y-2" style="padding-bottom:max(1rem,env(safe-area-inset-bottom))">
       <!-- 큰 버튼: 휴대폰은 '공유하기'(공유 창에서 카톡·인스타·문자 중 골라 글이 바로 들어감) / PC는 공유 창이 없어서 '오픈카톡' -->
-      <button type="button" id="sShare" class="hidden wb-share w-full py-2.5 rounded-2xl items-center justify-center gap-2.5"><i class="ph-bold ph-share-network text-lg"></i><span class="text-left leading-tight"><span class="text-sm font-extrabold">공유하기로 보내기</span><small>카톡·인스타·문자 중 골라서 바로</small></span></button>
+      <button type="button" id="sShare" class="hidden wb-share w-full py-2.5 rounded-2xl items-center justify-center gap-2.5"><i class="ph-bold ph-share-network text-lg"></i><span class="text-left leading-tight"><span class="text-sm font-extrabold">내용 전달하기</span><small>카톡·인스타·문자 중 선택</small></span></button>
       <button type="button" id="sKakao" class="w-full py-3.5 rounded-2xl bg-[#FEE500] text-[#191919] text-sm font-extrabold flex items-center justify-center gap-2 shadow-md shadow-yellow-200"><i class="ph-fill ph-chat-teardrop-text text-lg"></i>오픈카톡으로 보내기</button>
       <!-- 작은 버튼은 접지 않고 바로 보이게 (더보기를 한 번 더 누르는 단계 없앰) -->
       <div id="sRow" class="grid grid-cols-2 gap-2">
@@ -1131,10 +1131,7 @@ function updateSendLinks(){
   const msg=buildMsg();$("sPreview").textContent=msg;
   // 문자: 받는 번호와 내용이 자동으로 채워져서 아이폰·갤럭시 모두 복사 없이 전송
   $("sSms").href=`sms:${(CONFIG.PHONE||"").replace(/[^0-9+]/g,"")}${IS_IOS?"&":"?"}body=${encodeURIComponent(msg)}`;
-  $("sHint").innerHTML=(CAN_SHARE
-      ?"공유 창에서 <b>카카오톡 → 와방 오픈카톡방</b>을 고르면 글이 바로 들어가요. 방이 안 보이면 바로 아래 <b>오픈카톡</b>을 눌러주세요."
-      :"누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요.")
-    +(AUTO?"<br>전화번호는 받지 않아요. 답장은 오픈카톡으로 드려요.":"");
+  $("sHint").innerHTML="";
 }
 function openSend(){$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
 function closeSend(){hideCopy();$("sendModal").classList.add("hidden");if($("modal").classList.contains("hidden"))document.body.style.overflow=""}
@@ -1191,7 +1188,7 @@ if(IS_MOBILE){
   show("sShare");show("sKakaoSm");
   $("sKakao").classList.remove("flex");$("sKakao").classList.add("hidden");
   $("sRow").classList.replace("grid-cols-2","grid-cols-3");
-  if(!CAN_SHARE){const sm=$("sShare").querySelector("small");if(sm)sm.textContent="복사해서 카톡·인스타 어디든 붙여넣기"}
+  if(!CAN_SHARE){const sm=$("sShare").querySelector("small");if(sm)sm.textContent="카톡·인스타·문자 중 선택"}
 }
 $("sShare").addEventListener("click",()=>{
   if(!CAN_SHARE)return copyThen("kakao");
