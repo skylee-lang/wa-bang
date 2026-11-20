@@ -1,0 +1,12 @@
+# Cloudflare Workers Static Assets / Pages only; ignored by GitHub Pages.
+# No changes to customer-facing navigation or API calls.
+/*
+  X-Content-Type-Options: nosniff
+
+/admin/*
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/chat/*
+  X-Robots-Tag: noindex, nofollow
