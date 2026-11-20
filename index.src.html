@@ -777,19 +777,30 @@ async function load(){
   // 1) 이 기기에 저장해 둔 지난 목록이 있으면 먼저 바로 보여줌 (기다림 없음)
   const saved=LS.get(CK);
   if(saved&&saved.text){try{useText(saved.text);firstShow()}catch(e){}}
-  // 2) 구글 시트에서 최신 목록을 받아서, 바뀐 게 있으면 다시 그림
+  // 2) Cloudflare 문지기에서 최신 목록을 읽음. 통신 오류가 나도 로딩 화면은 반드시 종료
+  const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),12000);
   try{
-    const res=await fetch(CONFIG.CSV_URL+(CONFIG.CSV_URL.includes("?")?"&":"?")+"t="+Date.now()); // t= 값으로 캐시 우회
-    if(!res.ok)throw new Error(res.status);
+    const res=await fetch(CONFIG.CSV_URL+(CONFIG.CSV_URL.includes("?")?"&":"?")+"t="+Date.now(),{signal:controller.signal,cache:"no-store"});
+    if(!res.ok)throw new Error("HTTP "+res.status);
     const text=await res.text();
-    if(saved&&saved.text===text&&SHOWN_ONCE)return;      // 그대로면 끝
+    if(/^\\s*</.test(text))throw new Error("CSV 대신 HTML 응답");
+    if(saved&&saved.text===text&&SHOWN_ONCE)return;
+    useText(text); // CSV 파싱이 성공한 뒤에만 캐시 갱신
     LS.set(CK,{text,t:Date.now()});
-    useText(text);
     if(SHOWN_ONCE){loadPicks();render();drawPickBar()} else firstShow();
   }catch(e){
-    if(SHOWN_ONCE)return;    // 저장된 목록을 이미 보여주고 있으면 조용히 넘어감
-    all=[];$("loading").classList.add("hidden");render();$("emptyTitle").textContent="매물을 불러오지 못했어요";$("emptyDesc").textContent="잠시 후 새로고침해 주세요.";$("resetEmpty").classList.add("hidden");
     console.warn("[와방] 매물 불러오기 실패:",e);
+    if(SHOWN_ONCE)return; // 캐시의 매물을 이미 보여 줬으면 유지
+    all=[];
+    try{render()}catch(renderErr){console.warn("[와방] 오류 화면 렌더링 실패:",renderErr)}
+    $("empty").classList.remove("hidden");
+    $("emptyTitle").textContent="매물을 불러오지 못했어요";
+    const reason=e&&e.name==="AbortError"?"응답 시간이 초과됐어요.":String(e&&e.message||"").includes("429")?"접속자가 많아 잠시 제한됐어요.":"연결 상태를 확인한 뒤 다시 시도해 주세요.";
+    $("emptyDesc").textContent=reason+" 잠시 후 새로고침해 주세요.";
+    $("resetEmpty").classList.add("hidden");
+  }finally{
+    clearTimeout(timer);
+    $("loading").classList.add("hidden");
   }
 }
 let SHOWN_ONCE=false;
