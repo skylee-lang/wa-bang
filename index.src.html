@@ -1155,6 +1155,16 @@ function resetEverything(notify){
 }
 
 load();
+// 새 매물 반영: 열어 둔 화면도 자동 갱신 (비활성 탭에서는 요청하지 않음)
+let wabangLastRefresh=Date.now();
+function wabangRefreshWhenVisible(){
+  if(document.visibilityState==="hidden"||Date.now()-wabangLastRefresh<30000)return;
+  wabangLastRefresh=Date.now();
+  void load().catch(err=>console.warn("[와방] 목록 새로고침 실패",err));
+}
+setInterval(wabangRefreshWhenVisible,60000);
+document.addEventListener("visibilitychange",wabangRefreshWhenVisible);
+window.addEventListener("focus",wabangRefreshWhenVisible);
 </script>
 </body>
 </html>
