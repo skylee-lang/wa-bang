@@ -1,0 +1,24 @@
+# Effective only when this file is served at /robots.txt of the HOST root.
+# Search crawlers remain allowed; AI collection bots are asked not to crawl.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: *
+Disallow: /admin/
+Disallow: /chat/
+Allow: /
