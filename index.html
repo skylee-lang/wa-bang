@@ -1131,7 +1131,9 @@ function updateSendLinks(){
   const msg=buildMsg();$("sPreview").textContent=msg;
   // 문자: 받는 번호와 내용이 자동으로 채워져서 아이폰·갤럭시 모두 복사 없이 전송
   $("sSms").href=`sms:${(CONFIG.PHONE||"").replace(/[^0-9+]/g,"")}${IS_IOS?"&":"?"}body=${encodeURIComponent(msg)}`;
-  $("sHint").innerHTML="누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요."
+  $("sHint").innerHTML=(CAN_SHARE
+      ?"공유 창에서 <b>카카오톡 → 와방 오픈카톡방</b>을 고르면 글이 바로 들어가요. 방이 안 보이면 바로 아래 <b>오픈카톡</b>을 눌러주세요."
+      :"누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요.")
     +(AUTO?"<br>문의 앱을 열면 <b>수신 미확인</b> 상태로 문의 시도가 기록될 수 있어요. 실제 메시지는 앱에서 직접 전송해 주세요.":"");
 }
 function openSend(){hideCopy();$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
@@ -1189,22 +1191,23 @@ function copyNow(text){
   return Promise.resolve(false)}
 /* 공유하기 (휴대폰): 공유 창에서 카톡·인스타 등 채팅방을 고르면 글이 바로 들어감 */
 var CAN_SHARE=IS_MOBILE&&typeof navigator.share==="function";
-if(CAN_SHARE){
-  const sh=$("sShare");sh.classList.remove("hidden");sh.classList.add("flex");
+/* 휴대폰(카톡·인스타 앱 안 브라우저 포함)은 무조건 큰 버튼 = '공유하기', 작은 줄 첫 칸 = 오픈카톡.
+   공유 창이 없는 앱 안 브라우저는 누르면 복사 → 오픈카톡 열기로 이어짐. PC는 예전처럼 큰 버튼 = 오픈카톡 */
+if(IS_MOBILE){
+  const show=id=>{const e=$(id);e.classList.remove("hidden");e.classList.add("flex")};
+  show("sShare");show("sKakaoSm");
+  $("sKakao").classList.remove("flex");$("sKakao").classList.add("hidden");
   $("sRow").classList.replace("grid-cols-2","grid-cols-3");
+  if(!CAN_SHARE){const sm=$("sShare").querySelector("small");if(sm)sm.textContent="복사해서 카톡·인스타 어디든 붙여넣기"}
 }
-$("sMore").addEventListener("click",()=>{
-  const row=$("sRow"),open=row.classList.contains("hidden");
-  row.classList.toggle("hidden",!open);row.classList.toggle("grid",open);
-  $("sMoreIco").className="ph-bold "+(open?"ph-caret-up":"ph-caret-down");
-});
 $("sShare").addEventListener("click",()=>{
+  if(!CAN_SHARE)return copyThen("kakao");
   const msg=buildMsg();
   copyNow(msg); // 혹시 공유 앱이 글을 안 받아도 붙여넣기 할 수 있게 미리 복사
   void submitInquiry("공유").catch(()=>{}); // 공유 앱에서 돌아오지 않아도 수신 미확인 문의 시도 기록
   navigator.share({title:"와방 문의",text:msg})
     .then(()=>{toast("공유 창에서 메시지를 직접 전송해 주세요. 수신 여부는 중개사가 확인합니다.")})
-    .catch(e=>{if(e&&e.name==="AbortError")return; // 손님이 공유 창을 닫음
+    .catch(e=>{if(e&&e.name==="AbortError"){toast("공유 창에 와방 오픈카톡방이 없으면 바로 아래 '오픈카톡'을 눌러주세요");return} // 손님이 공유 창을 닫음
       showCopy("kakao",false)});
 });
 
@@ -1229,6 +1232,7 @@ function showCopy(where,ok){
 function hideCopy(){$("sCopy").classList.add("hidden");$("sCopy").classList.remove("flex")}
 function copyThen(where){copyNow(buildMsg()).then(ok=>showCopy(where,ok))}
 $("sKakao").addEventListener("click",()=>copyThen("kakao"));
+$("sKakaoSm").addEventListener("click",()=>copyThen("kakao"));
 $("sInsta").addEventListener("click",()=>copyThen("insta"));
 $("sCopyX").addEventListener("click",hideCopy);
 $("sCopyAgain").addEventListener("click",()=>copyNow($("sCopyText").value).then(ok=>{
