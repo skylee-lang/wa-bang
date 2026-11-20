@@ -474,6 +474,14 @@ const CONFIG = {
       <button type="button" id="sCopyAgain" class="w-full py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-1"><i class="ph-bold ph-copy"></i>다시 복사하기</button>
       <a id="sCopyGo" target="_blank" rel="noopener noreferrer" class="w-full py-3.5 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 shadow-md"></a>
     </div>
+    <!-- 실제 메시지 전송 여부는 외부 앱에서 알 수 없으므로 고객이 돌아와 확인 -->
+    <div id="sVerify" class="hidden absolute inset-0 z-40 bg-white flex-col justify-center gap-4 p-6 overflow-y-auto" aria-live="polite">
+      <h4 id="sVerifyTitle" class="text-lg font-extrabold text-slate-900 text-center">메시지를 실제로 보냈나요?</h4>
+      <p id="sVerifyDesc" class="text-sm text-slate-600 leading-relaxed text-center break-keep"></p>
+      <button type="button" id="sVerifyYes" class="w-full py-3.5 rounded-2xl bg-wabang-600 text-white text-sm font-extrabold">네, 실제로 보냈어요 · 문의 기록하기</button>
+      <button type="button" id="sVerifyNo" class="w-full py-3 rounded-2xl bg-slate-100 text-slate-700 text-sm font-bold">아직 안 보냈어요 · 돌아가기</button>
+      <p id="sVerifyStatus" class="text-xs text-slate-500 text-center leading-relaxed" role="status"></p>
+    </div>
     <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
       <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-1.5"><i class="ph-fill ph-paper-plane-tilt text-wabang-600"></i> 중개사에게 보내기</h3>
       <button id="sX" class="w-8 h-8 shrink-0 flex items-center justify-center rounded-full bg-slate-100 text-slate-500" aria-label="닫기"><i class="ph-bold ph-x text-base block"></i></button>
@@ -1131,17 +1139,18 @@ function updateSendLinks(){
   const msg=buildMsg();$("sPreview").textContent=msg;
   // 문자: 받는 번호와 내용이 자동으로 채워져서 아이폰·갤럭시 모두 복사 없이 전송
   $("sSms").href=`sms:${(CONFIG.PHONE||"").replace(/[^0-9+]/g,"")}${IS_IOS?"&":"?"}body=${encodeURIComponent(msg)}`;
-  $("sHint").innerHTML="";
+  $("sHint").innerHTML="누르면 "+(AUTO?"<b>문의번호</b>와 ":"")+"내용이 <b>복사</b>되고, 다음 화면에서 오픈카톡을 열어 <b>붙여넣기</b> 후 전송하면 끝이에요."
+    +(AUTO?"<br><b>중요:</b> 메시지를 보낸 뒤 와방 화면으로 돌아와 <b>‘보냈어요’</b>를 눌러야 문의 기록이 남아요.":"");
 }
-function openSend(){$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
-function closeSend(){hideCopy();$("sendModal").classList.add("hidden");if($("modal").classList.contains("hidden"))document.body.style.overflow=""}
+function openSend(){hideVerify();hideCopy();$("sDone").classList.add("hidden");$("sDone").classList.remove("flex");drawSend();$("sendModal").classList.remove("hidden");document.body.style.overflow="hidden"}
+function closeSend(){hideVerify();hideCopy();$("sendModal").classList.add("hidden");if($("modal").classList.contains("hidden"))document.body.style.overflow=""}
 $("pickBtn").onclick=openSend;["sBack","sX"].forEach(id=>$(id).onclick=closeSend);
 LS.set("wabang_who",null);   // 예전에 저장된 이름·연락처가 있으면 지움 (이제 받지 않음)
 
 /* 자동 접수 (INQUIRY_URL 이 있을 때만): 전화번호 없이 문의번호로 접수 → 손님은 같은 번호가 적힌 글을 오픈카톡에 붙여넣음
    - 문의번호는 휴대폰에서 바로 만듦: 복사는 터치 직후 바로 해야 해서(아이폰) 서버 응답을 기다릴 수 없음
    - 고른 매물·조건이 같으면 같은 번호를 다시 씀 → 여러 번 눌러도 접수는 한 번
-   - 실제 접수는 손님이 '오픈카톡 열기'(또는 인스타·문자·공유)를 누를 때 → 복사만 하고 나가면 접수 안 됨 */
+   - 외부 앱 실행·복사만으로는 접수하지 않음 → 고객이 실제 전송 후 직접 확인한 경우에만 기록 */
 const inqSig=()=>JSON.stringify([pickedItems().map(x=>x.id),getChat()]);
 function inqCode(){
   if(!AUTO)return "";
@@ -1154,19 +1163,26 @@ function inqCode(){
   }
   return INQ.code;
 }
-function submitInquiry(via){
-  if(!AUTO)return;
-  const code=inqCode();if(INQ.sent)return;INQ.sent=true;
-  const items=pickedItems(), sent=INQ;
-  const body=JSON.stringify({code,via,
+async function submitInquiry(via){
+  if(!AUTO)return {skipped:true};
+  const code=inqCode(), record=INQ;
+  if(record.sent)return {ok:true,duplicate:true};
+  if(record.sending)throw new Error("이미 기록을 저장하고 있어요.");
+  record.sending=true;
+  const items=pickedItems();
+  const body=JSON.stringify({code,via,customerConfirmed:true,
     items:items.map(x=>({id:x.id,type:x.type,area:x.area,short:itemShort(x),price:x.offers.map(priceText).join(" / "),link:itemLink(x)})),
     chat:getChat(),message:buildMsg()});
-  // keepalive: 손님이 바로 카톡 앱으로 넘어가도 전송이 끊기지 않게
-  fetch(CONFIG.INQUIRY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body,keepalive:true})
-    .then(r=>r.json()).then(j=>{if(!j||j.ok===false)throw new Error(j&&j.error)})
-    .catch(()=>{sent.sent=false});   // 실패해도 손님이 보낸 오픈카톡 글에 내용이 다 있음 → 다음에 누르면 다시 시도
+  try{
+    const r=await fetch(CONFIG.INQUIRY_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body,keepalive:true});
+    if(!r.ok)throw new Error("서버 응답 "+r.status);
+    const j=await r.json();
+    if(!j||j.ok!==true)throw new Error(j&&j.error||"접수 저장 실패");
+    record.sent=true;
+    return j;
+  }finally{record.sending=false}
 }
-$("sSms").addEventListener("click",()=>submitInquiry("문자"));
+$("sSms").addEventListener("click",()=>showVerify("문자"));
 /* 복사 (아이폰·갤럭시·PC): 터치 직후 '동기적으로' 실행해야 함 (await 뒤에 하면 아이폰이 막음) */
 function copyNow(text){
   let ok=false;const ta=document.createElement("textarea");
@@ -1181,22 +1197,21 @@ function copyNow(text){
   return Promise.resolve(false)}
 /* 공유하기 (휴대폰): 공유 창에서 카톡·인스타 등 채팅방을 고르면 글이 바로 들어감 */
 var CAN_SHARE=IS_MOBILE&&typeof navigator.share==="function";
-/* 휴대폰(카톡·인스타 앱 안 브라우저 포함)은 무조건 큰 버튼 = '공유하기', 작은 줄 첫 칸 = 오픈카톡.
-   공유 창이 없는 앱 안 브라우저는 누르면 복사 → 오픈카톡 열기로 이어짐. PC는 예전처럼 큰 버튼 = 오픈카톡 */
-if(IS_MOBILE){
-  const show=id=>{const e=$(id);e.classList.remove("hidden");e.classList.add("flex")};
-  show("sShare");show("sKakaoSm");
-  $("sKakao").classList.remove("flex");$("sKakao").classList.add("hidden");
+if(CAN_SHARE){
+  const sh=$("sShare");sh.classList.remove("hidden");sh.classList.add("flex");
   $("sRow").classList.replace("grid-cols-2","grid-cols-3");
-  if(!CAN_SHARE){const sm=$("sShare").querySelector("small");if(sm)sm.textContent="카톡·인스타·문자 중 선택"}
 }
+$("sMore").addEventListener("click",()=>{
+  const row=$("sRow"),open=row.classList.contains("hidden");
+  row.classList.toggle("hidden",!open);row.classList.toggle("grid",open);
+  $("sMoreIco").className="ph-bold "+(open?"ph-caret-up":"ph-caret-down");
+});
 $("sShare").addEventListener("click",()=>{
-  if(!CAN_SHARE)return copyThen("kakao");
   const msg=buildMsg();
   copyNow(msg); // 혹시 공유 앱이 글을 안 받아도 붙여넣기 할 수 있게 미리 복사
   navigator.share({title:"와방 문의",text:msg})
-    .then(()=>{submitInquiry("공유");toast("보냈어요! 중개사가 확인하면 연락드려요 🙌")})
-    .catch(e=>{if(e&&e.name==="AbortError"){toast("공유 창에 와방 오픈카톡방이 없으면 바로 아래 '오픈카톡'을 눌러주세요");return} // 손님이 공유 창을 닫음
+    .then(()=>{showVerify("공유");toast("공유 창을 이용했어요. 실제로 보냈다면 확인해 주세요.")})
+    .catch(e=>{if(e&&e.name==="AbortError")return; // 손님이 공유 창을 닫음
       showCopy("kakao",false)});
 });
 
@@ -1219,14 +1234,43 @@ function showCopy(where,ok){
   if(!ok){const t=$("sCopyText");setTimeout(()=>{try{t.focus();t.setSelectionRange(0,t.value.length)}catch(e){}},50)}
 }
 function hideCopy(){$("sCopy").classList.add("hidden");$("sCopy").classList.remove("flex")}
+let VERIFY_VIA="";
+function showVerify(via){
+  VERIFY_VIA=via;
+  $("sVerifyTitle").textContent="메시지를 실제로 보냈나요?";
+  $("sVerifyDesc").textContent=via+"에서 메시지 전송을 완료한 경우에만 아래 버튼을 눌러 주세요. 앱 실행·복사·공유 창 이용만으로는 전송이 확인되지 않습니다.";
+  $("sVerifyYes").textContent="네, 실제로 보냈어요 · 문의 기록하기";
+  $("sVerifyYes").disabled=false;$("sVerifyYes").classList.remove("hidden");
+  $("sVerifyNo").textContent="아직 안 보냈어요 · 돌아가기";
+  $("sVerifyStatus").textContent="실제 수신 여부는 중개사가 해당 앱에서 확인합니다.";
+  $("sVerify").classList.remove("hidden");$("sVerify").classList.add("flex");
+}
+function hideVerify(){$("sVerify").classList.add("hidden");$("sVerify").classList.remove("flex");VERIFY_VIA=""}
+$("sVerifyNo").addEventListener("click",()=>{hideVerify();hideCopy()});
+$("sVerifyYes").addEventListener("click",async()=>{
+  const via=VERIFY_VIA,btn=$("sVerifyYes");
+  if(!via||btn.disabled)return;
+  btn.disabled=true;btn.textContent="문의 기록 저장 중...";
+  $("sVerifyStatus").textContent="";
+  try{
+    const result=await submitInquiry(via);
+    $("sVerifyTitle").textContent=result.skipped?"메시지 전송 확인":"문의 기록 완료";
+    $("sVerifyDesc").textContent=result.skipped?"자동 문의 기록 기능은 현재 꺼져 있어요. 전송 결과는 해당 앱에서 확인해 주세요.":"고객이 전송 완료했다고 확인한 기록이 시트에 저장됐어요. 중개사가 "+via+"에서 실제 수신 여부를 확인합니다.";
+    $("sVerifyStatus").textContent="이 기록은 실제 메시지 수신을 자동으로 증명하지 않습니다.";
+    btn.classList.add("hidden");
+    $("sVerifyNo").textContent="확인하고 돌아가기";
+  }catch(e){
+    $("sVerifyStatus").textContent="문의 기록 저장 실패. 실제 메시지를 보냈더라도 시트 기록은 누락됐을 수 있어요. 다시 시도해 주세요.";
+    btn.disabled=false;btn.textContent="문의 기록 다시 시도";
+  }
+});
 function copyThen(where){copyNow(buildMsg()).then(ok=>showCopy(where,ok))}
 $("sKakao").addEventListener("click",()=>copyThen("kakao"));
-$("sKakaoSm").addEventListener("click",()=>copyThen("kakao"));
 $("sInsta").addEventListener("click",()=>copyThen("insta"));
 $("sCopyX").addEventListener("click",hideCopy);
 $("sCopyAgain").addEventListener("click",()=>copyNow($("sCopyText").value).then(ok=>{
   if(ok)toast("다시 복사했어요!");else{const t=$("sCopyText");t.focus();t.setSelectionRange(0,t.value.length);toast("글을 길게 눌러 '복사'해 주세요.")}}));
-$("sCopyGo").addEventListener("click",()=>{submitInquiry(COPY_WHERE==="kakao"?"오픈카톡":"인스타 DM");toast(PC_PASTE?"채팅창에서 Ctrl+V 하면 붙여넣어져요":"채팅창을 길게 눌러 '붙여넣기' 해주세요")});
+$("sCopyGo").addEventListener("click",()=>{showVerify(COPY_WHERE==="kakao"?"오픈카톡":"인스타 DM");toast("메시지를 보낸 뒤 돌아와 전송 확인을 눌러 주세요.")});
 
 function toast(m){const t=$("toast");t.textContent=m;t.classList.remove("hidden");clearTimeout(window.__tt);window.__tt=setTimeout(()=>t.classList.add("hidden"),3200)}
 
